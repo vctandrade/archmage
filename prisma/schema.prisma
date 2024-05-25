@@ -3,6 +3,22 @@ generator client {
 }
 
 datasource db {
-  provider = "sqlite"
+  provider = "postgres"
   url      = env("DATABASE_URL")
+}
+
+model User {
+  id          String    @id
+  spells      Spell[]
+  scrolls     Int       @default(0)
+  lastDailyAt DateTime? @db.Timestamptz()
+}
+
+model Spell {
+  id     Int
+  user   User   @relation(fields: [userId], references: [id])
+  userId String
+  amount Int    @default(0)
+
+  @@id([id, userId])
 }

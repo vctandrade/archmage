@@ -1,13 +1,14 @@
 {
   "$schema": "https://json.schemastore.org/tsconfig",
   "compilerOptions": {
-    "target": "es2022",
-    "module": "commonjs",
-    "outDir": "dist",
     "esModuleInterop": true,
+    "lib": ["es2023"],
+    "module": "node16",
+    "moduleResolution": "node16",
+    "outDir": "dist",
+    "skipLibCheck": true,
     "strict": true,
-    "noImplicitAny": true
+    "target": "es2022"
   },
-  "include": ["src"],
-  "exclude": ["node_modules"]
+  "include": ["src"]
 }
