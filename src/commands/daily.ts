@@ -23,14 +23,15 @@ class DailyCommand implements Command {
       user.lastDailyAt != null &&
       now.getTime() - user.lastDailyAt.getTime() < 72000 * 1000
     ) {
-      interaction.reply(
-        `Try again <t:${Math.ceil(user.lastDailyAt.getTime() / 1000 + 72000)}:R>.`,
-      );
+      await interaction.reply({
+        content: `Try again <t:${Math.ceil(user.lastDailyAt.getTime() / 1000 + 72000)}:R>.`,
+        ephemeral: true,
+      });
+
       return;
     }
 
-    const bookIndex = getRandomInt(configs.books.length);
-    const spellId = bookIndex * 12 + getRandomInt(5);
+    const spellId = getRandomSpellId();
     const message =
       configs.gatchaMessages[getRandomInt(configs.gatchaMessages.length)];
 
@@ -42,10 +43,15 @@ class DailyCommand implements Command {
       .setColor("Blue")
       .setDescription(format(message, configs.spellNames[spellId]));
 
-    interaction.reply({
+    await interaction.reply({
       embeds: [embed],
     });
   }
+}
+
+function getRandomSpellId(): number {
+  const bookIndex = getRandomInt(configs.books.length);
+  return 12 * bookIndex + getRandomInt(5);
 }
 
 function getRandomInt(max: number): number {

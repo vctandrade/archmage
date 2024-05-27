@@ -4,8 +4,9 @@ import Command from "./interfaces/command.js";
 import Users from "../dal/users.js";
 import grimoire from "./grimoire.js";
 import daily from "./daily.js";
+import merge from "./merge.js";
 
-const blueprints: Blueprint[] = [grimoire, daily];
+const blueprints: Blueprint[] = [grimoire, daily, merge];
 
 export function getInfos() {
   const result = [];

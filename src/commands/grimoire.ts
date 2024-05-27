@@ -53,6 +53,10 @@ class GrimoireCommand implements Command {
         );
       }
 
+      if (content.length == 0) {
+        continue;
+      }
+
       fields.push({
         name: `${book.icon} ${book.name}`,
         value: content.join("\n"),
@@ -72,7 +76,7 @@ class GrimoireCommand implements Command {
       });
     }
 
-    interaction.reply({
+    await interaction.reply({
       embeds: [embed],
     });
   }

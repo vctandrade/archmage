@@ -15,7 +15,7 @@ client.on(Events.InteractionCreate, async (interaction) => {
   }
 });
 
-client.login(process.env.DISCORD_TOKEN);
+await client.login(process.env.DISCORD_TOKEN);
 
 async function gracefulShutdown() {
   await client.destroy();

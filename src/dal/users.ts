@@ -47,9 +47,9 @@ export default class Users {
         spells: {
           upsert: user.spells.map((spell) => ({
             where: {
-              id_userId: {
-                id: spell.id,
+              userId_id: {
                 userId: user.id,
+                id: spell.id,
               },
             },
             update: {
