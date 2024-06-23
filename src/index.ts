@@ -1,24 +1,28 @@
 import "dotenv/config";
-import { Client, Events, GatewayIntentBits } from "discord.js";
-import { getCommands } from "./commands/index.js";
+import { PrismaClient } from "@prisma/client";
+import { Users } from "./dal/index.js";
+import Server from "./server.js";
+import {
+  ChecklistHandler,
+  DailyHandler,
+  GrimoireHandler,
+  MergeHandler,
+} from "./handlers/index.js";
 
-const client = new Client({
-  intents: [GatewayIntentBits.Guilds],
-});
+const prisma = new PrismaClient();
+const users = new Users(prisma);
 
-const commands = getCommands();
+const server = new Server();
+server.addHandler(new ChecklistHandler(users));
+server.addHandler(new DailyHandler(users));
+server.addHandler(new GrimoireHandler(users));
+server.addHandler(new MergeHandler(users));
 
-client.on(Events.InteractionCreate, async (interaction) => {
-  if (interaction.isChatInputCommand()) {
-    const command = commands.get(interaction.commandName);
-    await command?.execute(interaction);
-  }
-});
-
-await client.login(process.env.DISCORD_TOKEN);
+await server.start();
+console.log("Ready!");
 
 async function gracefulShutdown() {
-  await client.destroy();
+  await server.stop();
 }
 
 process.on("SIGTERM", gracefulShutdown);

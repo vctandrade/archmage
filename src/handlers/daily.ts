@@ -2,20 +2,36 @@ import { format } from "util";
 import {
   ChatInputCommandInteraction,
   EmbedBuilder,
+  Interaction,
   SlashCommandBuilder,
 } from "discord.js";
-import Command from "./interfaces/command.js";
 import Users from "../dal/users.js";
 import configs from "../configs/index.js";
 
-class DailyCommand implements Command {
+export default class DailyHandler {
   users: Users;
+
+  static info = new SlashCommandBuilder()
+    .setName("daily")
+    .setDescription("Claims your daily spell");
 
   constructor(users: Users) {
     this.users = users;
   }
 
-  async execute(interaction: ChatInputCommandInteraction): Promise<void> {
+  async handle(interaction: Interaction) {
+    if (
+      interaction.isChatInputCommand() &&
+      interaction.commandName == DailyHandler.info.name
+    ) {
+      await this.execute(interaction);
+      return true;
+    }
+
+    return false;
+  }
+
+  async execute(interaction: ChatInputCommandInteraction) {
     const user = await this.users.get(interaction.user.id);
     const now = new Date();
 
@@ -57,15 +73,3 @@ function getRandomSpellId(): number {
 function getRandomInt(max: number): number {
   return Math.floor(Math.random() * max);
 }
-
-export default {
-  getInfo() {
-    return new SlashCommandBuilder()
-      .setName("daily")
-      .setDescription("Claims your daily spell");
-  },
-
-  getCommand(users: Users) {
-    return new DailyCommand(users);
-  },
-};

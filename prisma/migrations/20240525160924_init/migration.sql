@@ -9,11 +9,11 @@ CREATE TABLE "User" (
 
 -- CreateTable
 CREATE TABLE "Spell" (
-    "id" INTEGER NOT NULL,
     "userId" TEXT NOT NULL,
+    "id" INTEGER NOT NULL,
     "amount" INTEGER NOT NULL DEFAULT 0,
 
-    CONSTRAINT "Spell_pkey" PRIMARY KEY ("id","userId")
+    CONSTRAINT "Spell_pkey" PRIMARY KEY ("userId","id")
 );
 
 -- AddForeignKey

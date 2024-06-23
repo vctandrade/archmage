@@ -11,8 +11,8 @@
     "lint": "eslint .",
     "format": "prettier -w .",
     "generate": "npx prisma generate",
-    "build": "rm -r dist && tsc",
-    "update-commands": "node dist/update-commands.js"
+    "build": "rm -rf dist && tsc",
+    "upload-commands": "node dist/upload-commands.js"
   },
   "devDependencies": {
     "@eslint/js": "^9.2.0",

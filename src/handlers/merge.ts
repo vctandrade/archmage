@@ -1,20 +1,54 @@
 import {
+  AutocompleteInteraction,
   ChatInputCommandInteraction,
   EmbedBuilder,
+  Interaction,
   SlashCommandBuilder,
 } from "discord.js";
-import Command from "./interfaces/command.js";
-import Users from "../dal/users.js";
+import { Users } from "../dal/index.js";
 import configs from "../configs/index.js";
 
-class MergeCommand implements Command {
+export default class MergeHandler {
   users: Users;
+
+  static info = new SlashCommandBuilder()
+    .setName("merge")
+    .setDescription(
+      "Convert two copies of a spell into a spell of higher level",
+    )
+    .addStringOption((option) =>
+      option
+        .setName("spell")
+        .setDescription("the name of the spell to convert")
+        .setRequired(true)
+        .setAutocomplete(true),
+    );
 
   constructor(users: Users) {
     this.users = users;
   }
 
-  async execute(interaction: ChatInputCommandInteraction): Promise<void> {
+  async handle(interaction: Interaction) {
+    if (
+      interaction.isChatInputCommand() &&
+      interaction.commandName == MergeHandler.info.name
+    ) {
+      await this.execute(interaction);
+      return true;
+    }
+
+    if (
+      interaction.isAutocomplete() &&
+      interaction.commandName == MergeHandler.info.name
+    ) {
+      await this.autocomplete(interaction);
+      return true;
+    }
+
+    return false;
+  }
+
+  async execute(interaction: ChatInputCommandInteraction) {
     const user = await this.users.get(interaction.user.id);
 
     const spellName = interaction.options.getString("spell") ?? "";
@@ -67,28 +101,32 @@ class MergeCommand implements Command {
       embeds: [embed],
     });
   }
+
+  async autocomplete(interaction: AutocompleteInteraction) {
+    const user = await this.users.get(interaction.user.id);
+    const prefix = interaction.options.getString("spell", true).toLowerCase();
+
+    const suggestions = [];
+    for (const spell of user.spells) {
+      if (spell.amount < 2) {
+        continue;
+      }
+
+      const spellName = configs.spellNames[spell.id];
+      if (spellName.toLowerCase().startsWith(prefix)) {
+        suggestions.push(spellName);
+      }
+    }
+
+    await interaction.respond(
+      suggestions.map((suggestion) => ({
+        name: suggestion,
+        value: suggestion,
+      })),
+    );
+  }
 }
 
 function getRandomInt(min: number, max: number): number {
   return min + Math.floor(Math.random() * (max - min));
 }
-
-export default {
-  getInfo() {
-    return new SlashCommandBuilder()
-      .setName("merge")
-      .setDescription(
-        "Convert two copies of a spell into a spell of higher level",
-      )
-      .addStringOption((option) =>
-        option
-          .setName("spell")
-          .setDescription("the name of the spell to convert")
-          .setRequired(true),
-      );
-  },
-
-  getCommand(users: Users) {
-    return new MergeCommand(users);
-  },
-};

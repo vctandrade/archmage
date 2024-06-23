@@ -1,58 +1,58 @@
 export default [
   {
     name: "Flame",
-    icon: ":fire:",
+    icon: "🔥",
   },
   {
     name: "Stone",
-    icon: ":rock:",
+    icon: "🪨",
   },
   {
     name: "Storm",
-    icon: ":thunder_cloud_rain",
+    icon: "⛈️",
   },
   {
     name: "Frost",
-    icon: ":snowflake:",
+    icon: "❄️",
   },
   {
     name: "Underdark",
-    icon: ":skull:",
+    icon: "💀",
   },
   {
     name: "Overlight",
-    icon: ":angel:",
+    icon: "👼",
   },
   {
     name: "Nature",
-    icon: ":herb:",
+    icon: "🌿",
   },
   {
     name: "Seas",
-    icon: ":ocean:",
+    icon: "🌊",
   },
   {
     name: "Cogs",
-    icon: ":gear:",
+    icon: "⚙️",
   },
   {
     name: "Seasons",
-    icon: ":fallen_leaf:",
+    icon: "🍂",
   },
   {
     name: "Illusion",
-    icon: ":mirror:",
+    icon: "🪞",
   },
   {
     name: "Blood",
-    icon: ":drop_of_blood:",
+    icon: "🩸",
   },
   {
     name: "Druidism",
-    icon: ":wolf:",
+    icon: "🐺",
   },
   {
     name: "Cosmos",
-    icon: ":ringed_planet:",
+    icon: "🪐",
   },
 ];

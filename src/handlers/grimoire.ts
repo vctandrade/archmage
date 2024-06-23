@@ -1,21 +1,42 @@
 import {
   ChatInputCommandInteraction,
   EmbedBuilder,
+  Interaction,
   SlashCommandBuilder,
 } from "discord.js";
-import Command from "./interfaces/command.js";
-import Users from "../dal/users.js";
+import { Users } from "../dal/index.js";
 import { UserSpell } from "../models/user.js";
 import configs from "../configs/index.js";
 
-class GrimoireCommand implements Command {
+export default class GrimoireHandler {
   users: Users;
+
+  static info = new SlashCommandBuilder()
+    .setName("grimoire")
+    .setDescription("Shows all known spells of a mage")
+    .addUserOption((option) =>
+      option
+        .setName("mage")
+        .setDescription("the mage whose grimoire you want to see"),
+    );
 
   constructor(users: Users) {
     this.users = users;
   }
 
-  async execute(interaction: ChatInputCommandInteraction): Promise<void> {
+  async handle(interaction: Interaction) {
+    if (
+      interaction.isChatInputCommand() &&
+      interaction.commandName == GrimoireHandler.info.name
+    ) {
+      await this.execute(interaction);
+      return true;
+    }
+
+    return false;
+  }
+
+  async execute(interaction: ChatInputCommandInteraction) {
     const target = interaction.options.getUser("mage") ?? interaction.user;
 
     const user = await this.users.get(target.id);
@@ -81,20 +102,3 @@ class GrimoireCommand implements Command {
     });
   }
 }
-
-export default {
-  getInfo() {
-    return new SlashCommandBuilder()
-      .setName("grimoire")
-      .setDescription("Show all known spells of a mage")
-      .addUserOption((option) =>
-        option
-          .setName("mage")
-          .setDescription("the mage whose grimoire you want to see"),
-      );
-  },
-
-  getCommand(users: Users) {
-    return new GrimoireCommand(users);
-  },
-};
