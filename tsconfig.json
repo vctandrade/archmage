@@ -2,13 +2,13 @@
   "$schema": "https://json.schemastore.org/tsconfig",
   "compilerOptions": {
     "esModuleInterop": true,
-    "lib": ["esnext"],
+    "lib": ["es2022"],
     "module": "nodenext",
     "moduleResolution": "nodenext",
     "outDir": "dist",
     "skipLibCheck": true,
     "strict": true,
-    "target": "esnext"
+    "target": "es2022"
   },
   "include": ["src"]
 }

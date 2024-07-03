@@ -1,1 +1,2 @@
-export { default as Users } from "./users.js";
+export { Users } from "./users.js";
+export { TradeOffers } from "./trade-offers.js";

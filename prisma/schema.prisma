@@ -22,3 +22,14 @@ model Spell {
 
   @@id([userId, id])
 }
+
+model TradeOffer {
+  channelId String
+  messageId String
+  userId    String
+  give      Int[]
+  receive   Int[]
+  createdAt DateTime @default(now()) @db.Timestamptz()
+
+  @@id([channelId, messageId])
+}

@@ -9,19 +9,17 @@ import {
   StringSelectMenuInteraction,
   StringSelectMenuOptionBuilder,
 } from "discord.js";
-import Users from "../dal/users.js";
+import { Users } from "../dal/index.js";
 import configs from "../configs/index.js";
 
-export default class ChecklistHandler {
-  users: Users;
-
+export class ChecklistHandler {
   static info = new SlashCommandBuilder()
     .setName("checklist")
     .setDescription("Shows which spells you are missing");
 
-  constructor(users: Users) {
-    this.users = users;
-  }
+  constructor(private users: Users) {}
+
+  async setup() {}
 
   async handle(interaction: Interaction) {
     if (
@@ -43,12 +41,12 @@ export default class ChecklistHandler {
     return false;
   }
 
-  async execute(interaction: ChatInputCommandInteraction) {
+  private async execute(interaction: ChatInputCommandInteraction) {
     const reply = await this.buildReply(interaction.user.id, 0);
     await interaction.reply(reply);
   }
 
-  async changeBook(interaction: StringSelectMenuInteraction) {
+  private async changeBook(interaction: StringSelectMenuInteraction) {
     const [userId, bookIndexString] = interaction.values[0].split(" ");
     const bookIndex = parseInt(bookIndexString);
 
@@ -56,11 +54,11 @@ export default class ChecklistHandler {
     await interaction.update(reply);
   }
 
-  async buildReply(userId: string, bookIndex: number) {
+  private async buildReply(userId: string, bookIndex: number) {
     const user = await this.users.get(userId);
 
     const unknownSpellsByBook = new Map<number, number>();
-    const spellIds = new Set<number>();
+    const knownSpellIds = new Set<number>();
 
     const countUnknownSpells = (bookIndex: number) =>
       unknownSpellsByBook.get(bookIndex) ?? 12;
@@ -72,31 +70,15 @@ export default class ChecklistHandler {
 
       const bookIndex = Math.floor(spell.id / 12);
       unknownSpellsByBook.set(bookIndex, countUnknownSpells(bookIndex) - 1);
-      spellIds.add(spell.id);
-    }
-
-    function buildSpellList(name: string, minId: number, maxId: number) {
-      const content = [];
-      for (let spellId = minId; spellId < maxId; spellId++) {
-        const spellName = configs.spellNames[spellId];
-        content.push(
-          format(spellIds.has(spellId) ? "~~%s~~" : "%s", spellName),
-        );
-      }
-
-      return {
-        name,
-        value: content.join("\n"),
-        inline: true,
-      };
+      knownSpellIds.add(spell.id);
     }
 
     const offset = bookIndex * 12;
 
     const fields = [
-      buildSpellList("Level 1", offset, offset + 5),
-      buildSpellList("Level 2", offset + 5, offset + 10),
-      buildSpellList("Level 3", offset + 10, offset + 12),
+      this.buildSpellList(knownSpellIds, "Level 1", offset + 0, offset + 5),
+      this.buildSpellList(knownSpellIds, "Level 2", offset + 5, offset + 10),
+      this.buildSpellList(knownSpellIds, "Level 3", offset + 10, offset + 12),
     ];
 
     const embed = new EmbedBuilder()
@@ -104,7 +86,7 @@ export default class ChecklistHandler {
       .setTitle(
         `${configs.books[bookIndex].icon} ${configs.books[bookIndex].name}`,
       )
-      .addFields(fields);
+      .setFields(fields);
 
     const options = [];
     for (let bookIndex = 0; bookIndex < configs.books.length; bookIndex++) {
@@ -123,7 +105,7 @@ export default class ChecklistHandler {
       );
     }
 
-    const row = new ActionRowBuilder<StringSelectMenuBuilder>().addComponents(
+    const row = new ActionRowBuilder<StringSelectMenuBuilder>().setComponents(
       new StringSelectMenuBuilder()
         .setCustomId(ChecklistHandler.info.name)
         .setPlaceholder("Display another book")
@@ -133,6 +115,27 @@ export default class ChecklistHandler {
     return {
       embeds: [embed],
       components: [row],
+    };
+  }
+
+  private buildSpellList(
+    knownSpellIds: Set<number>,
+    name: string,
+    minId: number,
+    maxId: number,
+  ) {
+    const content = [];
+    for (let spellId = minId; spellId < maxId; spellId++) {
+      const spellName = configs.spellNames[spellId];
+      content.push(
+        format(knownSpellIds.has(spellId) ? "~~%s~~" : "%s", spellName),
+      );
+    }
+
+    return {
+      name,
+      value: content.join("\n"),
+      inline: true,
     };
   }
 }

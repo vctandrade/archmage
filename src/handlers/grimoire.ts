@@ -5,12 +5,10 @@ import {
   SlashCommandBuilder,
 } from "discord.js";
 import { Users } from "../dal/index.js";
-import { UserSpell } from "../models/user.js";
+import { UserSpell } from "../models/index.js";
 import configs from "../configs/index.js";
 
-export default class GrimoireHandler {
-  users: Users;
-
+export class GrimoireHandler {
   static info = new SlashCommandBuilder()
     .setName("grimoire")
     .setDescription("Shows all known spells of a mage")
@@ -20,9 +18,9 @@ export default class GrimoireHandler {
         .setDescription("the mage whose grimoire you want to see"),
     );
 
-  constructor(users: Users) {
-    this.users = users;
-  }
+  constructor(private users: Users) {}
+
+  async setup() {}
 
   async handle(interaction: Interaction) {
     if (
@@ -36,7 +34,7 @@ export default class GrimoireHandler {
     return false;
   }
 
-  async execute(interaction: ChatInputCommandInteraction) {
+  private async execute(interaction: ChatInputCommandInteraction) {
     const target = interaction.options.getUser("mage") ?? interaction.user;
 
     const user = await this.users.get(target.id);
@@ -88,7 +86,7 @@ export default class GrimoireHandler {
     if (fields.length == 0) {
       embed.setDescription("This mage knows no spells.");
     } else {
-      embed.addFields(fields);
+      embed.setFields(fields);
     }
 
     if (user.scrolls > 0) {

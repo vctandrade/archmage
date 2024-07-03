@@ -28,7 +28,8 @@
     "@prisma/client": "^5.14.0",
     "@types/node": "^20.12.11",
     "discord.js": "^14.15.2",
-    "dotenv": "^16.4.5"
+    "dotenv": "^16.4.5",
+    "fuse.js": "^7.0.0"
   },
   "prettier": {
     "plugins": [

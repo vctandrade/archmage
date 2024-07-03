@@ -5,19 +5,18 @@ import {
   Interaction,
   SlashCommandBuilder,
 } from "discord.js";
-import Users from "../dal/users.js";
+import { Users } from "../dal/index.js";
+import { Random } from "../utils/random.js";
 import configs from "../configs/index.js";
 
-export default class DailyHandler {
-  users: Users;
-
+export class DailyHandler {
   static info = new SlashCommandBuilder()
     .setName("daily")
     .setDescription("Claims your daily spell");
 
-  constructor(users: Users) {
-    this.users = users;
-  }
+  constructor(private users: Users) {}
+
+  async setup() {}
 
   async handle(interaction: Interaction) {
     if (
@@ -31,7 +30,7 @@ export default class DailyHandler {
     return false;
   }
 
-  async execute(interaction: ChatInputCommandInteraction) {
+  private async execute(interaction: ChatInputCommandInteraction) {
     const user = await this.users.get(interaction.user.id);
     const now = new Date();
 
@@ -47,11 +46,10 @@ export default class DailyHandler {
       return;
     }
 
-    const spellId = getRandomSpellId();
-    const message =
-      configs.gatchaMessages[getRandomInt(configs.gatchaMessages.length)];
+    const spellId = this.getRandomSpellId();
+    const message = Random.sample(configs.gatchaMessages);
 
-    user.addSpell(spellId);
+    user.incrementSpell(spellId);
     user.lastDailyAt = now;
     await this.users.upsert(user);
 
@@ -63,13 +61,9 @@ export default class DailyHandler {
       embeds: [embed],
     });
   }
-}
 
-function getRandomSpellId(): number {
-  const bookIndex = getRandomInt(configs.books.length);
-  return 12 * bookIndex + getRandomInt(5);
-}
-
-function getRandomInt(max: number): number {
-  return Math.floor(Math.random() * max);
+  private getRandomSpellId(): number {
+    const bookIndex = Random.getInt(0, configs.books.length);
+    return 12 * bookIndex + Random.getInt(0, 5);
+  }
 }

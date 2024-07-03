@@ -10,7 +10,7 @@ export class User {
     Object.assign(this, init);
   }
 
-  addSpell(id: number, amount: number = 1) {
+  incrementSpell(id: number, amount: number = 1) {
     for (const spell of this.spells) {
       if (spell.id == id) {
         spell.amount += amount;
@@ -19,5 +19,22 @@ export class User {
     }
 
     this.spells.push({ id, amount });
+  }
+
+  decrementSpell(id: number, amount: number = 1) {
+    for (const spell of this.spells) {
+      if (spell.id != id) {
+        continue;
+      }
+
+      if (spell.amount < amount) {
+        break;
+      }
+
+      spell.amount -= amount;
+      return;
+    }
+
+    throw new Error("Invalid decrement.");
   }
 }
