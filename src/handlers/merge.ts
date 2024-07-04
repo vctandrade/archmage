@@ -7,7 +7,6 @@ import {
 } from "discord.js";
 import Fuse from "fuse.js";
 import { Users } from "../dal/index.js";
-import { Random } from "../utils/random.js";
 import configs from "../configs/index.js";
 
 export class MergeHandler {
@@ -15,9 +14,7 @@ export class MergeHandler {
 
   static info = new SlashCommandBuilder()
     .setName("merge")
-    .setDescription(
-      "Convert two copies of a spell into a spell of higher level",
-    )
+    .setDescription("Convert two copies of a spell into scrolls")
     .addStringOption((option) =>
       option
         .setName("spell")
@@ -81,27 +78,28 @@ export class MergeHandler {
       return;
     }
 
-    let reward;
-    if (spellId % 12 < 10) {
-      const bookIndex = Random.getInt(0, configs.books.length);
-      const newSpellId =
-        spellId % 12 < 5
-          ? 12 * bookIndex + Random.getInt(5, 10)
-          : 12 * bookIndex + Random.getInt(10, 12);
+    let scrolls;
+    switch (this.getSpellLevel(spellId)) {
+      case 1:
+        scrolls = 1;
+        break;
 
-      user.incrementSpell(newSpellId);
-      reward = configs.spellNames[newSpellId];
-    } else {
-      user.scrolls += 1;
-      reward = ":scroll: ×1";
+      case 2:
+        scrolls = 3;
+        break;
+
+      case 3:
+        scrolls = 7;
+        break;
     }
 
+    user.scrolls += scrolls;
     await this.users.upsert(user);
 
     const embed = new EmbedBuilder()
       .setColor("Blue")
       // eslint-disable-next-line no-irregular-whitespace
-      .setDescription(`${spellName} ×2 ⟹ ${reward}`);
+      .setDescription(`**${spellName}** ×2 ⟹ :scroll: ×${scrolls}`);
 
     await interaction.reply({
       embeds: [embed],
@@ -132,5 +130,17 @@ export class MergeHandler {
     }
 
     await interaction.respond(result);
+  }
+
+  private getSpellLevel(spellId: number) {
+    if (spellId % 12 < 5) {
+      return 1;
+    }
+
+    if (spellId % 12 < 10) {
+      return 2;
+    }
+
+    return 3;
   }
 }
