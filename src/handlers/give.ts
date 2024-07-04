@@ -9,16 +9,22 @@ import Fuse from "fuse.js";
 import { Users } from "../dal/index.js";
 import configs from "../configs/index.js";
 
-export class MergeHandler {
+export class GiveHandler {
   private spellNames: Fuse<string>;
 
   static info = new SlashCommandBuilder()
-    .setName("merge")
-    .setDescription("Convert two copies of a spell into scrolls")
+    .setName("give")
+    .setDescription("Adds a spell to a mage's grimoire")
+    .addUserOption((option) =>
+      option
+        .setName("mage")
+        .setDescription("the mage to whom give the spell")
+        .setRequired(true),
+    )
     .addStringOption((option) =>
       option
         .setName("spell")
-        .setDescription("the name of a spell you want to merge")
+        .setDescription("the name of the spell to give")
         .setRequired(true)
         .setAutocomplete(true),
     );
@@ -34,7 +40,7 @@ export class MergeHandler {
   async handle(interaction: Interaction) {
     if (
       interaction.isChatInputCommand() &&
-      interaction.commandName == MergeHandler.info.name
+      interaction.commandName == GiveHandler.info.name
     ) {
       await this.execute(interaction);
       return true;
@@ -42,7 +48,7 @@ export class MergeHandler {
 
     if (
       interaction.isAutocomplete() &&
-      interaction.commandName == MergeHandler.info.name
+      interaction.commandName == GiveHandler.info.name
     ) {
       await this.autocomplete(interaction);
       return true;
@@ -52,9 +58,10 @@ export class MergeHandler {
   }
 
   private async execute(interaction: ChatInputCommandInteraction) {
-    const user = await this.users.get(interaction.user.id);
-
+    const target = interaction.options.getUser("mage", true);
     const spellName = interaction.options.getString("spell", true);
+
+    const user = await this.users.get(target.id);
     const spellId = configs.spellNames.indexOf(spellName);
 
     if (spellId < 0) {
@@ -67,39 +74,12 @@ export class MergeHandler {
       return;
     }
 
-    try {
-      user.decrementSpell(spellId, 2);
-    } catch {
-      await interaction.reply({
-        content: `You must possess at least 2 **${spellName}** to proceed.`,
-        ephemeral: true,
-      });
-
-      return;
-    }
-
-    let scrolls;
-    switch (this.getSpellLevel(spellId)) {
-      case 1:
-        scrolls = 1;
-        break;
-
-      case 2:
-        scrolls = 3;
-        break;
-
-      case 3:
-        scrolls = 7;
-        break;
-    }
-
-    user.scrolls += scrolls;
+    user.incrementSpell(spellId);
     await this.users.upsert(user);
 
     const embed = new EmbedBuilder()
       .setColor("Blue")
-      // eslint-disable-next-line no-irregular-whitespace
-      .setDescription(`**${spellName}** ×2 ⟹ :scroll: ×${scrolls}`);
+      .setDescription(`**${spellName}** was gifted to ${target}.`);
 
     await interaction.reply({
       embeds: [embed],
@@ -108,19 +88,13 @@ export class MergeHandler {
 
   private async autocomplete(interaction: AutocompleteInteraction) {
     const prefix = interaction.options.getString("spell", true).toLowerCase();
-    const user = await this.users.get(interaction.user.id);
 
     const result = [];
-    for (const spell of user.spells) {
+    for (const spellName of configs.spellNames) {
       if (result.length >= 25) {
         break;
       }
 
-      if (spell.amount < 2) {
-        continue;
-      }
-
-      const spellName = configs.spellNames[spell.id];
       if (spellName.toLowerCase().startsWith(prefix)) {
         result.push({
           name: spellName,
@@ -130,17 +104,5 @@ export class MergeHandler {
     }
 
     await interaction.respond(result);
-  }
-
-  private getSpellLevel(spellId: number) {
-    if (spellId % 12 < 5) {
-      return 1;
-    }
-
-    if (spellId % 12 < 10) {
-      return 2;
-    }
-
-    return 3;
   }
 }

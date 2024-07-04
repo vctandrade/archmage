@@ -12,7 +12,7 @@ export default [
   "While traversing the desert, you found a magic lamp and wished for **%s**. Still, you remain thirsty.",
   "While walking through the market, you saw a snob looking noble and stole their **%s**.",
   "While you were out in the courtyard, a black notebook containing **%s** fell from the sky at your feet. Now you can see demons.",
-  "Years of prayers were not in vain. Because of your devotion, you god bestowed you the gift of **%s**.",
+  "Years of prayers were not in vain. Because of your devotion, you god bestowed upon you the gift of **%s**.",
   "You asked Yudi for a PlayStation but instead got **%s**.",
   "You called in an old favor from some gang members you used to know. They retrieved **%s** for you.",
   "You came from the future and gave yourself **%s**. There wasn't time to explain anything, though.",

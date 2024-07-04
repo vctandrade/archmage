@@ -5,6 +5,7 @@ import Server from "./server.js";
 import {
   ChecklistHandler,
   DailyHandler,
+  GiveHandler,
   GrimoireHandler,
   MergeHandler,
   TradeHandler,
@@ -17,6 +18,7 @@ const tradeOffers = new TradeOffers(prisma);
 const server = new Server();
 server.addHandler(new ChecklistHandler(users));
 server.addHandler(new DailyHandler(users));
+server.addHandler(new GiveHandler(users));
 server.addHandler(new GrimoireHandler(users));
 server.addHandler(new MergeHandler(users));
 server.addHandler(

@@ -28,13 +28,13 @@ export class TradeHandler {
     .addStringOption((option) =>
       option
         .setName("give")
-        .setDescription("comma-separated spell names")
+        .setDescription("comma-separated names of the offered spells")
         .setRequired(true),
     )
     .addStringOption((option) =>
       option
         .setName("receive")
-        .setDescription("comma-separated spell names")
+        .setDescription("comma-separated names of the desired spells")
         .setRequired(true),
     );
 

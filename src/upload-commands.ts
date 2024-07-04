@@ -3,6 +3,7 @@ import { REST, Routes } from "discord.js";
 import {
   ChecklistHandler,
   DailyHandler,
+  GiveHandler,
   GrimoireHandler,
   MergeHandler,
   TradeHandler,
@@ -14,6 +15,7 @@ await rest.put(Routes.applicationCommands(process.env.DISCORD_APPLICATION_ID), {
   body: [
     ChecklistHandler.info,
     DailyHandler.info,
+    GiveHandler.info,
     GrimoireHandler.info,
     MergeHandler.info,
     TradeHandler.info,
