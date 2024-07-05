@@ -5,7 +5,7 @@ CREATE TABLE "TradeOffer" (
     "userId" TEXT NOT NULL,
     "give" INTEGER[],
     "receive" INTEGER[],
-    "createdAt" TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "expiresAt" TIMESTAMPTZ NOT NULL,
 
     CONSTRAINT "TradeOffer_pkey" PRIMARY KEY ("channelId","messageId")
 );

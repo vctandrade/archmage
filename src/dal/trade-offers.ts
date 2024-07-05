@@ -33,6 +33,9 @@ export class TradeOffers {
     give: number[],
     receive: number[],
   ) {
+    const now = new Date().getTime();
+    const expiresAt = new Date(now + 3600000);
+
     const result = await this.prisma.tradeOffer.create({
       data: {
         channelId,
@@ -40,6 +43,7 @@ export class TradeOffers {
         userId,
         give,
         receive,
+        expiresAt,
       },
     });
 

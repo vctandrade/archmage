@@ -222,7 +222,7 @@ export class TradeHandler {
     this.tasks.set(tradeOffer, task);
 
     await new Promise((resolve) => {
-      const ms = tradeOffer.createdAt.getTime() + 3600000 - Date.now();
+      const ms = tradeOffer.expiresAt.getTime() - Date.now();
       setTimeout(resolve, ms);
       task.once("cancel", resolve);
     });

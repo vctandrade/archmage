@@ -29,7 +29,7 @@ model TradeOffer {
   userId    String
   give      Int[]
   receive   Int[]
-  createdAt DateTime @default(now()) @db.Timestamptz()
+  expiresAt DateTime @db.Timestamptz()
 
   @@id([channelId, messageId])
 }

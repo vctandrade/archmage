@@ -6,7 +6,7 @@ export class TradeOffer {
   userId: string = "";
   give: number[] = [];
   receive: number[] = [];
-  createdAt: Date = new Date();
+  expiresAt: Date = new Date();
 
   constructor(init: Partial<TradeOffer>) {
     Object.assign(this, init);
