@@ -18,13 +18,13 @@ export class GiveHandler {
     .addUserOption((option) =>
       option
         .setName("mage")
-        .setDescription("the mage to whom give the spell")
+        .setDescription("The mage to whom give the spell")
         .setRequired(true),
     )
     .addStringOption((option) =>
       option
         .setName("spell")
-        .setDescription("the name of the spell to give")
+        .setDescription("The name of the spell to give")
         .setRequired(true)
         .setAutocomplete(true),
     );

@@ -64,6 +64,12 @@ export class Users {
               amount: spell.amount,
             },
           })),
+          deleteMany: {
+            userId: user.id,
+            id: {
+              notIn: user.spells.map((spell) => spell.id),
+            },
+          },
         },
       },
       create: {

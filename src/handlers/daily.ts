@@ -46,7 +46,7 @@ export class DailyHandler {
       return;
     }
 
-    const spellId = this.getRandomSpellId();
+    const spellId = Random.getSpellId(1);
     const message = Random.sample(configs.gatchaMessages);
 
     user.incrementSpell(spellId);
@@ -60,10 +60,5 @@ export class DailyHandler {
     await interaction.reply({
       embeds: [embed],
     });
-  }
-
-  private getRandomSpellId(): number {
-    const bookIndex = Random.getInt(0, configs.books.length);
-    return 12 * bookIndex + Random.getInt(0, 5);
   }
 }

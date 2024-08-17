@@ -6,6 +6,7 @@ import {
   GiveHandler,
   GrimoireHandler,
   MergeHandler,
+  ShopHandler,
   TradeHandler,
 } from "./handlers/index.js";
 
@@ -18,6 +19,7 @@ await rest.put(Routes.applicationCommands(process.env.DISCORD_APPLICATION_ID), {
     GiveHandler.info,
     GrimoireHandler.info,
     MergeHandler.info,
+    ShopHandler.info,
     TradeHandler.info,
   ],
 });

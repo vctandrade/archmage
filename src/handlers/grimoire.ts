@@ -15,7 +15,7 @@ export class GrimoireHandler {
     .addUserOption((option) =>
       option
         .setName("mage")
-        .setDescription("the mage whose grimoire you want to see"),
+        .setDescription("The mage whose grimoire you want to see"),
     );
 
   constructor(private users: Users) {}

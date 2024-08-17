@@ -8,13 +8,13 @@ datasource db {
 }
 
 model User {
-  id          String    @id
-  spells      Spell[]
-  scrolls     Int       @default(0)
-  lastDailyAt DateTime? @db.Timestamptz()
+  id          String      @id
+  spells      UserSpell[]
+  scrolls     Int         @default(0)
+  lastDailyAt DateTime?   @db.Timestamptz()
 }
 
-model Spell {
+model UserSpell {
   user   User   @relation(fields: [userId], references: [id])
   userId String
   id     Int
@@ -32,4 +32,20 @@ model TradeOffer {
   expiresAt DateTime @db.Timestamptz()
 
   @@id([channelId, messageId])
+}
+
+model Shop {
+  channelId String      @id
+  messageId String?
+  spells    ShopSpell[]
+  updatesAt DateTime    @db.Timestamptz()
+}
+
+model ShopSpell {
+  Shop      Shop   @relation(fields: [channelId], references: [channelId])
+  channelId String
+  id        Int
+  amount    Int    @default(0)
+
+  @@id([channelId, id])
 }

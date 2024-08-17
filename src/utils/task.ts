@@ -1,18 +1,48 @@
-import EventEmitter from "events";
+import { Lock } from "./lock.js";
 
-export class Task extends EventEmitter {
-  private cancelled_ = false;
+type Callback = () => void;
 
+export class Task {
+  private cancelCallbacks: Callback[] = [];
+
+  private _cancelled = false;
   get cancelled() {
-    return this.cancelled_;
+    return this._cancelled;
+  }
+
+  private _lock = new Lock();
+  get lock() {
+    return this._lock;
   }
 
   cancel() {
-    if (this.cancelled_) {
+    if (this._cancelled) {
       return;
     }
 
-    this.cancelled_ = true;
-    this.emit("cancel");
+    this._cancelled = true;
+    for (const callback of this.cancelCallbacks) {
+      callback();
+    }
+  }
+
+  onCancel(callback: Callback) {
+    if (this._cancelled) {
+      callback();
+      return;
+    }
+
+    this.cancelCallbacks.push(callback);
+  }
+
+  offCancel(callback: Callback) {
+    const index = this.cancelCallbacks.findIndex((entry) => entry == callback);
+    this.cancelCallbacks.splice(index, 1);
+  }
+
+  static cancel() {
+    const result = new Task();
+    result.cancel();
+    return result;
   }
 }

@@ -98,9 +98,9 @@ export class ChecklistHandler {
 
       options.push(
         new StringSelectMenuOptionBuilder()
+          .setValue(`${user.id} ${bookIndex}`)
           .setEmoji(book.icon)
           .setLabel(book.name)
-          .setValue(`${user.id} ${bookIndex}`)
           .setDescription(description),
       );
     }

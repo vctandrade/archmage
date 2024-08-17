@@ -13,8 +13,9 @@ import {
 import Fuse from "fuse.js";
 import { TradeOffers, Users } from "../dal/index.js";
 import { TradeOffer, User } from "../models/index.js";
-import { Task } from "../utils/task.js";
 import { HashMap } from "../collections/hash-map.js";
+import { Task } from "../utils/task.js";
+import { sleepUntil } from "../utils/time.js";
 import configs from "../configs/index.js";
 
 export class TradeHandler {
@@ -28,13 +29,13 @@ export class TradeHandler {
     .addStringOption((option) =>
       option
         .setName("give")
-        .setDescription("comma-separated names of the offered spells")
+        .setDescription("Comma-separated names of the offered spells")
         .setRequired(true),
     )
     .addStringOption((option) =>
       option
         .setName("receive")
-        .setDescription("comma-separated names of the desired spells")
+        .setDescription("Comma-separated names of the desired spells")
         .setRequired(true),
     );
 
@@ -57,7 +58,7 @@ export class TradeHandler {
   async setup() {
     const tradeOffers = await this.tradeOffers.getAll();
     for (const tradeOffer of tradeOffers) {
-      this.expire(tradeOffer).catch(console.log);
+      this.expire(tradeOffer).catch(console.error);
     }
   }
 
@@ -116,7 +117,7 @@ export class TradeHandler {
       receive,
     );
 
-    this.expire(tradeOffer).catch(console.log);
+    this.expire(tradeOffer).catch(console.error);
   }
 
   private async accept(interaction: ButtonInteraction) {
@@ -160,9 +161,17 @@ export class TradeHandler {
       return;
     }
 
-    if (!this.cancelTask(tradeOffer)) {
+    const task = this.tasks.get(tradeOffer);
+    if (task == null) {
+      await interaction.reply({
+        content: "Fate has already been sealed.",
+        ephemeral: true,
+      });
+
       return;
     }
+
+    task.cancel();
 
     await this.users.bulkUpsert([giver, receiver]);
 
@@ -197,9 +206,17 @@ export class TradeHandler {
       return;
     }
 
-    if (!this.cancelTask(tradeOffer)) {
+    const task = this.tasks.get(tradeOffer);
+    if (task == null) {
+      await interaction.reply({
+        content: "Fate has already been sealed.",
+        ephemeral: true,
+      });
+
       return;
     }
+
+    task.cancel();
 
     const embed = new EmbedBuilder(interaction.message.embeds[0].data)
       .setColor("Red")
@@ -219,22 +236,19 @@ export class TradeHandler {
 
   private async expire(tradeOffer: TradeOffer) {
     const task = new Task();
+    task.onCancel(() => this.tasks.delete(tradeOffer));
     this.tasks.set(tradeOffer, task);
 
-    await new Promise((resolve) => {
-      const ms = tradeOffer.expiresAt.getTime() - Date.now();
-      setTimeout(resolve, ms);
-      task.once("cancel", resolve);
-    });
-
-    this.tasks.delete(tradeOffer);
+    await sleepUntil(tradeOffer.expiresAt, task);
     if (task.cancelled) {
       return;
     }
 
+    this.tasks.delete(tradeOffer);
+
     const channel = await this.channelManager.fetch(tradeOffer.channelId);
     if (channel == null || !channel.isTextBased()) {
-      return;
+      throw new Error(`Invalid channelId: "${tradeOffer.channelId}".`);
     }
 
     const message = await channel.messages.fetch(tradeOffer.messageId);
@@ -252,17 +266,6 @@ export class TradeHandler {
     await this.tradeOffers.delete(tradeOffer.channelId, tradeOffer.messageId);
   }
 
-  private cancelTask(tradeOffer: TradeOffer) {
-    const task = this.tasks.get(tradeOffer);
-    if (task == null) {
-      return false;
-    }
-
-    this.tasks.delete(tradeOffer);
-    task.cancel();
-    return true;
-  }
-
   private parse(input: string) {
     const result = [];
     for (let spellName of input.split(",")) {
@@ -278,10 +281,6 @@ export class TradeHandler {
 
     result.sort();
     return result;
-  }
-
-  private format(spellIds: number[]) {
-    return spellIds.map((spellId) => configs.spellNames[spellId]).join("\n");
   }
 
   private buildReply(
@@ -331,6 +330,10 @@ export class TradeHandler {
     };
   }
 
+  private format(spellIds: number[]) {
+    return spellIds.map((spellId) => configs.spellNames[spellId]).join("\n");
+  }
+
   private transferSpell(spellId: number, giver: User, receiver: User) {
     try {
       giver.decrementSpell(spellId);
@@ -352,6 +355,6 @@ class ErrorBadSpellTransfer extends Error {
     public userId: string,
     public spellName: string,
   ) {
-    super(`User with id="${userId}" cannot transfer "${spellName}".`);
+    super(`User with id="${userId}" cannot transfer spell "${spellName}".`);
   }
 }

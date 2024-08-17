@@ -18,7 +18,7 @@ export class MergeHandler {
     .addStringOption((option) =>
       option
         .setName("spell")
-        .setDescription("the name of a spell you want to merge")
+        .setDescription("The name of a spell you want to merge")
         .setRequired(true)
         .setAutocomplete(true),
     );
@@ -81,15 +81,15 @@ export class MergeHandler {
     let scrolls;
     switch (this.getSpellLevel(spellId)) {
       case 1:
-        scrolls = 1;
-        break;
-
-      case 2:
         scrolls = 3;
         break;
 
+      case 2:
+        scrolls = 5;
+        break;
+
       case 3:
-        scrolls = 7;
+        scrolls = 8;
         break;
     }
 
@@ -98,7 +98,6 @@ export class MergeHandler {
 
     const embed = new EmbedBuilder()
       .setColor("Blue")
-      // eslint-disable-next-line no-irregular-whitespace
       .setDescription(`**${spellName}** ×2 ⟹ :scroll: ×${scrolls}`);
 
     await interaction.reply({

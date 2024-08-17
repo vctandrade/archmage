@@ -1,16 +1,18 @@
-export type UserSpell = { id: number; amount: number };
+import { HashCodeBuilder } from "../utils/hash-code.js";
 
-export class User {
-  id: string = "";
-  spells: UserSpell[] = [];
-  scrolls: number = 0;
-  lastDailyAt: Date | null = null;
+export type ShopSpell = { id: number; amount: number };
 
-  constructor(init: Partial<User>) {
+export class Shop {
+  channelId: string = "";
+  messageId: string | null = null;
+  spells: ShopSpell[] = [];
+  updatesAt: Date = new Date();
+
+  constructor(init: Partial<Shop>) {
     Object.assign(this, init);
   }
 
-  incrementSpell(id: number, amount: number = 1) {
+  addSpell(id: number, amount: number = 1) {
     for (const spell of this.spells) {
       if (spell.id == id) {
         spell.amount += amount;
@@ -30,8 +32,13 @@ export class User {
     }
 
     this.spells[index].amount -= amount;
-    if (spell.amount == 0) {
-      this.spells.splice(index, 1);
-    }
+  }
+
+  hashCode() {
+    return new HashCodeBuilder().addString(this.channelId).build();
+  }
+
+  equals(other: Shop) {
+    return this.channelId == other.channelId;
   }
 }
