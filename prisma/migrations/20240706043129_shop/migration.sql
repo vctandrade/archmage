@@ -17,4 +17,4 @@ CREATE TABLE "ShopSpell" (
 );
 
 -- AddForeignKey
-ALTER TABLE "ShopSpell" ADD CONSTRAINT "ShopSpell_channelId_fkey" FOREIGN KEY ("channelId") REFERENCES "Shop"("channelId") ON DELETE RESTRICT ON UPDATE CASCADE;
+ALTER TABLE "ShopSpell" ADD CONSTRAINT "ShopSpell_channelId_fkey" FOREIGN KEY ("channelId") REFERENCES "Shop"("channelId") ON DELETE CASCADE ON UPDATE CASCADE;

@@ -11,7 +11,7 @@ import {
   UserManager,
 } from "discord.js";
 import Fuse from "fuse.js";
-import { TradeOffers, Users } from "../dal/index.js";
+import { Database } from "../dal/database.js";
 import { TradeOffer, User } from "../models/index.js";
 import { HashMap } from "../collections/hash-map.js";
 import { Task } from "../utils/task.js";
@@ -42,8 +42,7 @@ export class TradeHandler {
   constructor(
     private userManager: UserManager,
     private channelManager: ChannelManager,
-    private users: Users,
-    private tradeOffers: TradeOffers,
+    private db: Database,
   ) {
     this.spellIds = new Map();
     for (let i = 0; i < configs.spellNames.length; i++) {
@@ -56,7 +55,7 @@ export class TradeHandler {
   }
 
   async setup() {
-    const tradeOffers = await this.tradeOffers.getAll();
+    const tradeOffers = await this.db.tradeOffers.getAll();
     for (const tradeOffer of tradeOffers) {
       this.expire(tradeOffer).catch(console.error);
     }
@@ -109,7 +108,7 @@ export class TradeHandler {
     const reply = this.buildReply(interaction, give, receive);
     const message = await interaction.reply(reply);
 
-    const tradeOffer = await this.tradeOffers.create(
+    const tradeOffer = await this.db.tradeOffers.create(
       interaction.channelId,
       message.id,
       interaction.user.id,
@@ -121,7 +120,7 @@ export class TradeHandler {
   }
 
   private async accept(interaction: ButtonInteraction) {
-    const tradeOffer = await this.tradeOffers.get(
+    const tradeOffer = await this.db.tradeOffers.get(
       interaction.channelId,
       interaction.message.id,
     );
@@ -135,8 +134,8 @@ export class TradeHandler {
       return;
     }
 
-    const giver = await this.users.get(tradeOffer.userId);
-    const receiver = await this.users.get(interaction.user.id);
+    const giver = await this.db.users.get(tradeOffer.userId);
+    const receiver = await this.db.users.get(interaction.user.id);
 
     try {
       for (const spellId of tradeOffer.give) {
@@ -173,7 +172,10 @@ export class TradeHandler {
 
     task.cancel();
 
-    await this.users.bulkUpsert([giver, receiver]);
+    await this.db.withTransaction(async (tx) => {
+      await tx.users.upsert(giver);
+      await tx.users.upsert(receiver);
+    });
 
     const embed = new EmbedBuilder(interaction.message.embeds[0].data)
       .setColor("Green")
@@ -185,14 +187,14 @@ export class TradeHandler {
       components: [],
     });
 
-    await this.tradeOffers.delete(
+    await this.db.tradeOffers.delete(
       interaction.channelId,
       interaction.message.id,
     );
   }
 
   private async abort(interaction: ButtonInteraction) {
-    const tradeOffer = await this.tradeOffers.get(
+    const tradeOffer = await this.db.tradeOffers.get(
       interaction.channelId,
       interaction.message.id,
     );
@@ -228,7 +230,7 @@ export class TradeHandler {
       components: [],
     });
 
-    await this.tradeOffers.delete(
+    await this.db.tradeOffers.delete(
       interaction.channelId,
       interaction.message.id,
     );
@@ -263,7 +265,10 @@ export class TradeHandler {
       components: [],
     });
 
-    await this.tradeOffers.delete(tradeOffer.channelId, tradeOffer.messageId);
+    await this.db.tradeOffers.delete(
+      tradeOffer.channelId,
+      tradeOffer.messageId,
+    );
   }
 
   private parse(input: string) {

@@ -1,4 +1,5 @@
-import { Prisma, PrismaClient } from "@prisma/client";
+import { Prisma } from "@prisma/client";
+import { Client } from "./client.js";
 import { Shop } from "../models/index.js";
 
 type Model = Prisma.ShopGetPayload<{
@@ -13,14 +14,10 @@ type Model = Prisma.ShopGetPayload<{
 }>;
 
 export class Shops {
-  private prisma: PrismaClient;
-
-  constructor(prisma: PrismaClient) {
-    this.prisma = prisma;
-  }
+  constructor(private client: Client) {}
 
   async get(channelId: string) {
-    const shop = await this.prisma.shop.findUnique({
+    const shop = await this.client.shop.findUnique({
       where: {
         channelId,
       },
@@ -37,12 +34,12 @@ export class Shops {
   }
 
   async getAll() {
-    const results = await this.prisma.shop.findMany();
+    const results = await this.client.shop.findMany();
     return results.map((result) => new Shop(result));
   }
 
   upsert(shop: Model) {
-    return this.prisma.shop.upsert({
+    return this.client.shop.upsert({
       where: {
         channelId: shop.channelId,
       },
@@ -88,17 +85,10 @@ export class Shops {
   }
 
   delete(channelId: string) {
-    return this.prisma.$transaction([
-      this.prisma.shopSpell.deleteMany({
-        where: {
-          channelId,
-        },
-      }),
-      this.prisma.shop.delete({
-        where: {
-          channelId,
-        },
-      }),
-    ]);
+    return this.client.shop.delete({
+      where: {
+        channelId,
+      },
+    });
   }
 }

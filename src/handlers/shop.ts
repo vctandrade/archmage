@@ -12,7 +12,7 @@ import {
 } from "discord.js";
 import dayjs from "dayjs";
 import configs from "../configs/index.js";
-import { Shops, Users } from "../dal/index.js";
+import { Database } from "../dal/database.js";
 import { Shop } from "../models/index.js";
 import { Random } from "../utils/random.js";
 import { Task } from "../utils/task.js";
@@ -49,12 +49,11 @@ export class ShopHandler {
 
   constructor(
     private channelManager: ChannelManager,
-    private users: Users,
-    private shops: Shops,
+    private db: Database,
   ) {}
 
   async setup() {
-    const shops = await this.shops.getAll();
+    const shops = await this.db.shops.getAll();
     for (const shop of shops) {
       const task = this.createTask(shop.channelId);
       this.update(shop.channelId, dayjs(shop.updatesAt), task).catch(
@@ -124,10 +123,10 @@ export class ShopHandler {
 
     let shop;
     try {
-      shop = await this.shops.get(interaction.channelId);
+      shop = await this.db.shops.get(interaction.channelId);
       shop ??= new Shop({ channelId: interaction.channelId });
       shop.updatesAt = time.toDate();
-      await this.shops.upsert(shop);
+      await this.db.shops.upsert(shop);
     } finally {
       taskNew.lock.release();
     }
@@ -156,7 +155,7 @@ export class ShopHandler {
 
       task.cancel();
 
-      const shop = await this.shops.get(interaction.channelId);
+      const shop = await this.db.shops.get(interaction.channelId);
       if (shop == null) {
         throw new Error(
           `Shop not found with channelId=${interaction.channelId}.`,
@@ -169,7 +168,7 @@ export class ShopHandler {
       }
 
       await this.expire(channel, shop.messageId);
-      await this.shops.delete(shop.channelId);
+      await this.db.shops.delete(shop.channelId);
 
       await interaction.reply({
         content: "See you next time!",
@@ -194,7 +193,7 @@ export class ShopHandler {
         return;
       }
 
-      const shop = await this.shops.get(interaction.channelId);
+      const shop = await this.db.shops.get(interaction.channelId);
       if (shop == null) {
         throw new Error(
           `Shop not found with channelId=${interaction.channelId}.`,
@@ -213,7 +212,7 @@ export class ShopHandler {
       }
 
       const message = await channel.messages.fetch(shop.messageId);
-      const user = await this.users.get(interaction.user.id);
+      const user = await this.db.users.get(interaction.user.id);
       const itemId = interaction.values[0];
 
       let spellId;
@@ -268,9 +267,10 @@ export class ShopHandler {
       user.scrolls -= price;
       user.incrementSpell(spellId);
 
-      // TODO: transaction
-      await this.users.upsert(user);
-      await this.shops.upsert(shop);
+      await this.db.withTransaction(async (tx) => {
+        await tx.users.upsert(user);
+        await tx.shops.upsert(shop);
+      });
 
       const embed = new EmbedBuilder()
         .setColor("Blue")
@@ -302,14 +302,14 @@ export class ShopHandler {
 
         const channel = await this.channelManager.fetch(channelId);
         if (channel == null || !channel.isTextBased()) {
-          this.shops.delete(channelId);
+          this.db.shops.delete(channelId);
           console.warn(
             `Deleted shop because channelId="${channelId}" was invalid.`,
           );
           return;
         }
 
-        const shop = await this.shops.get(channelId);
+        const shop = await this.db.shops.get(channelId);
         if (shop == null) {
           task.cancel();
           console.warn(
@@ -329,7 +329,7 @@ export class ShopHandler {
         shop.messageId = message.id;
 
         this.setRandomSpells(shop);
-        await this.shops.upsert(shop);
+        await this.db.shops.upsert(shop);
 
         const ui = this.buildUI(shop);
         await message.edit(ui);

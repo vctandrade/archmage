@@ -9,7 +9,7 @@ import {
   StringSelectMenuInteraction,
   StringSelectMenuOptionBuilder,
 } from "discord.js";
-import { Users } from "../dal/index.js";
+import { Database } from "../dal/database.js";
 import configs from "../configs/index.js";
 
 export class ChecklistHandler {
@@ -17,7 +17,7 @@ export class ChecklistHandler {
     .setName("checklist")
     .setDescription("Shows which spells you are missing");
 
-  constructor(private users: Users) {}
+  constructor(private db: Database) {}
 
   async setup() {}
 
@@ -55,7 +55,7 @@ export class ChecklistHandler {
   }
 
   private async buildReply(userId: string, bookIndex: number) {
-    const user = await this.users.get(userId);
+    const user = await this.db.users.get(userId);
 
     const unknownSpellsByBook = new Map<number, number>();
     const knownSpellIds = new Set<number>();

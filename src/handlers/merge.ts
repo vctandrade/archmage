@@ -6,7 +6,7 @@ import {
   SlashCommandBuilder,
 } from "discord.js";
 import Fuse from "fuse.js";
-import { Users } from "../dal/index.js";
+import { Database } from "../dal/database.js";
 import configs from "../configs/index.js";
 
 export class MergeHandler {
@@ -23,7 +23,7 @@ export class MergeHandler {
         .setAutocomplete(true),
     );
 
-  constructor(private users: Users) {
+  constructor(private db: Database) {
     this.spellNames = new Fuse(configs.spellNames, {
       threshold: 1,
     });
@@ -52,7 +52,7 @@ export class MergeHandler {
   }
 
   private async execute(interaction: ChatInputCommandInteraction) {
-    const user = await this.users.get(interaction.user.id);
+    const user = await this.db.users.get(interaction.user.id);
 
     const spellName = interaction.options.getString("spell", true);
     const spellId = configs.spellNames.indexOf(spellName);
@@ -94,7 +94,7 @@ export class MergeHandler {
     }
 
     user.scrolls += scrolls;
-    await this.users.upsert(user);
+    await this.db.users.upsert(user);
 
     const embed = new EmbedBuilder()
       .setColor("Blue")
@@ -107,7 +107,7 @@ export class MergeHandler {
 
   private async autocomplete(interaction: AutocompleteInteraction) {
     const prefix = interaction.options.getString("spell", true).toLowerCase();
-    const user = await this.users.get(interaction.user.id);
+    const user = await this.db.users.get(interaction.user.id);
 
     const result = [];
     for (const spell of user.spells) {

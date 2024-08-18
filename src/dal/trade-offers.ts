@@ -1,15 +1,11 @@
-import { PrismaClient } from "@prisma/client";
+import { Client } from "./client.js";
 import { TradeOffer } from "../models/index.js";
 
 export class TradeOffers {
-  private prisma: PrismaClient;
-
-  constructor(prisma: PrismaClient) {
-    this.prisma = prisma;
-  }
+  constructor(private client: Client) {}
 
   async get(channelId: string, messageId: string) {
-    const result = await this.prisma.tradeOffer.findUniqueOrThrow({
+    const result = await this.client.tradeOffer.findUniqueOrThrow({
       where: {
         channelId_messageId: {
           channelId,
@@ -22,7 +18,7 @@ export class TradeOffers {
   }
 
   async getAll() {
-    const results = await this.prisma.tradeOffer.findMany();
+    const results = await this.client.tradeOffer.findMany();
     return results.map((result) => new TradeOffer(result));
   }
 
@@ -36,7 +32,7 @@ export class TradeOffers {
     const now = new Date().getTime();
     const expiresAt = new Date(now + 3600000);
 
-    const result = await this.prisma.tradeOffer.create({
+    const result = await this.client.tradeOffer.create({
       data: {
         channelId,
         messageId,
@@ -51,7 +47,7 @@ export class TradeOffers {
   }
 
   async delete(channelId: string, messageId: string) {
-    await this.prisma.tradeOffer.delete({
+    await this.client.tradeOffer.delete({
       where: {
         channelId_messageId: {
           channelId,

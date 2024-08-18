@@ -15,7 +15,7 @@ model User {
 }
 
 model UserSpell {
-  user   User   @relation(fields: [userId], references: [id])
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
   userId String
   id     Int
   amount Int    @default(0)
@@ -42,7 +42,7 @@ model Shop {
 }
 
 model ShopSpell {
-  Shop      Shop   @relation(fields: [channelId], references: [channelId])
+  Shop      Shop   @relation(fields: [channelId], references: [channelId], onDelete: Cascade)
   channelId String
   id        Int
   amount    Int    @default(0)

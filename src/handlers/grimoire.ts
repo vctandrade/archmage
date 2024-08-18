@@ -4,7 +4,7 @@ import {
   Interaction,
   SlashCommandBuilder,
 } from "discord.js";
-import { Users } from "../dal/index.js";
+import { Database } from "../dal/database.js";
 import { UserSpell } from "../models/index.js";
 import configs from "../configs/index.js";
 
@@ -18,7 +18,7 @@ export class GrimoireHandler {
         .setDescription("The mage whose grimoire you want to see"),
     );
 
-  constructor(private users: Users) {}
+  constructor(private db: Database) {}
 
   async setup() {}
 
@@ -37,7 +37,7 @@ export class GrimoireHandler {
   private async execute(interaction: ChatInputCommandInteraction) {
     const target = interaction.options.getUser("mage") ?? interaction.user;
 
-    const user = await this.users.get(target.id);
+    const user = await this.db.users.get(target.id);
     user.spells.sort((a, b) => a.id - b.id);
 
     const grimoire = new Map<number, UserSpell[]>();

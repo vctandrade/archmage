@@ -2,7 +2,7 @@ import "dotenv/config";
 import dayjs from "dayjs";
 import customParseFormat from "dayjs/plugin/customParseFormat.js";
 import { PrismaClient } from "@prisma/client";
-import { Shops, TradeOffers, Users } from "./dal/index.js";
+import { Database } from "./dal/database.js";
 import Server from "./server.js";
 import {
   ChecklistHandler,
@@ -17,20 +17,16 @@ import {
 dayjs.extend(customParseFormat);
 
 const prisma = new PrismaClient();
-const users = new Users(prisma);
-const tradeOffers = new TradeOffers(prisma);
-const shops = new Shops(prisma);
+const db = new Database(prisma);
 
 const server = new Server();
-server.addHandler(new ChecklistHandler(users));
-server.addHandler(new DailyHandler(users));
-server.addHandler(new GiveHandler(users));
-server.addHandler(new GrimoireHandler(users));
-server.addHandler(new MergeHandler(users));
-server.addHandler(new ShopHandler(server.channels, users, shops));
-server.addHandler(
-  new TradeHandler(server.users, server.channels, users, tradeOffers),
-);
+server.addHandler(new ChecklistHandler(db));
+server.addHandler(new DailyHandler(db));
+server.addHandler(new GiveHandler(db));
+server.addHandler(new GrimoireHandler(db));
+server.addHandler(new MergeHandler(db));
+server.addHandler(new ShopHandler(server.channels, db));
+server.addHandler(new TradeHandler(server.users, server.channels, db));
 
 await server.start();
 console.info("Ready!");

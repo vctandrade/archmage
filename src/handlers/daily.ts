@@ -5,7 +5,7 @@ import {
   Interaction,
   SlashCommandBuilder,
 } from "discord.js";
-import { Users } from "../dal/index.js";
+import { Database } from "../dal/database.js";
 import { Random } from "../utils/random.js";
 import configs from "../configs/index.js";
 
@@ -14,7 +14,7 @@ export class DailyHandler {
     .setName("daily")
     .setDescription("Claims your daily spell");
 
-  constructor(private users: Users) {}
+  constructor(private db: Database) {}
 
   async setup() {}
 
@@ -31,7 +31,7 @@ export class DailyHandler {
   }
 
   private async execute(interaction: ChatInputCommandInteraction) {
-    const user = await this.users.get(interaction.user.id);
+    const user = await this.db.users.get(interaction.user.id);
     const now = new Date();
 
     if (
@@ -51,7 +51,7 @@ export class DailyHandler {
 
     user.incrementSpell(spellId);
     user.lastDailyAt = now;
-    await this.users.upsert(user);
+    await this.db.users.upsert(user);
 
     const embed = new EmbedBuilder()
       .setColor("Blue")

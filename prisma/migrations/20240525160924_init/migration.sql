@@ -17,4 +17,4 @@ CREATE TABLE "UserSpell" (
 );
 
 -- AddForeignKey
-ALTER TABLE "UserSpell" ADD CONSTRAINT "UserSpell_userId_fkey" FOREIGN KEY ("userId") REFERENCES "User"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
+ALTER TABLE "UserSpell" ADD CONSTRAINT "UserSpell_userId_fkey" FOREIGN KEY ("userId") REFERENCES "User"("id") ON DELETE CASCADE ON UPDATE CASCADE;

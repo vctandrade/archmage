@@ -6,7 +6,7 @@ import {
   SlashCommandBuilder,
 } from "discord.js";
 import Fuse from "fuse.js";
-import { Users } from "../dal/index.js";
+import { Database } from "../dal/database.js";
 import configs from "../configs/index.js";
 
 export class GiveHandler {
@@ -29,7 +29,7 @@ export class GiveHandler {
         .setAutocomplete(true),
     );
 
-  constructor(private users: Users) {
+  constructor(private db: Database) {
     this.spellNames = new Fuse(configs.spellNames, {
       threshold: 1,
     });
@@ -61,7 +61,7 @@ export class GiveHandler {
     const target = interaction.options.getUser("mage", true);
     const spellName = interaction.options.getString("spell", true);
 
-    const user = await this.users.get(target.id);
+    const user = await this.db.users.get(target.id);
     const spellId = configs.spellNames.indexOf(spellName);
 
     if (spellId < 0) {
@@ -75,7 +75,7 @@ export class GiveHandler {
     }
 
     user.incrementSpell(spellId);
-    await this.users.upsert(user);
+    await this.db.users.upsert(user);
 
     const embed = new EmbedBuilder()
       .setColor("Blue")

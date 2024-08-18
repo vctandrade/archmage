@@ -1,4 +1,5 @@
-import { Prisma, PrismaClient } from "@prisma/client";
+import { Prisma } from "@prisma/client";
+import { Client } from "./client.js";
 import { User } from "../models/index.js";
 
 type Model = Prisma.UserGetPayload<{
@@ -13,14 +14,10 @@ type Model = Prisma.UserGetPayload<{
 }>;
 
 export class Users {
-  private prisma: PrismaClient;
-
-  constructor(prisma: PrismaClient) {
-    this.prisma = prisma;
-  }
+  constructor(private client: Client) {}
 
   async get(id: string) {
-    const user = await this.prisma.user.findUnique({
+    const user = await this.client.user.findUnique({
       where: {
         id,
       },
@@ -36,12 +33,8 @@ export class Users {
     return new User(user);
   }
 
-  bulkUpsert(users: Model[]) {
-    return this.prisma.$transaction(users.map((user) => this.upsert(user)));
-  }
-
   upsert(user: Model) {
-    return this.prisma.user.upsert({
+    return this.client.user.upsert({
       where: {
         id: user.id,
       },
