@@ -35,4 +35,6 @@ async function gracefulShutdown() {
   await server.stop();
 }
 
-process.on("SIGTERM", gracefulShutdown);
+for (const signal of ["SIGINT", "SIGTERM"]) {
+  process.on(signal, gracefulShutdown);
+}
