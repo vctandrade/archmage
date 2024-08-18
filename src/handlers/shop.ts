@@ -11,13 +11,14 @@ import {
   TextBasedChannel,
 } from "discord.js";
 import dayjs from "dayjs";
-import configs from "../configs/index.js";
 import { Database } from "../dal/database.js";
 import { Shop } from "../models/index.js";
+import { Lock } from "../utils/lock.js";
 import { Random } from "../utils/random.js";
-import { Task } from "../utils/task.js";
 import { TableBuilder } from "../utils/table.js";
+import { Task } from "../utils/task.js";
 import { sleepFor, sleepUntil } from "../utils/time.js";
+import configs from "../configs/index.js";
 
 type Item = {
   name: string;
@@ -50,6 +51,7 @@ export class ShopHandler {
   constructor(
     private channelManager: ChannelManager,
     private db: Database,
+    private lock: Lock,
   ) {}
 
   async setup() {
@@ -113,187 +115,165 @@ export class ShopHandler {
       time = time.add(1, "day");
     }
 
-    const task = this.getTask(interaction.channelId);
-    await task.lock.acquire();
-    task.cancel();
+    this.getTask(interaction.channelId).cancel();
+    const task = this.createTask(interaction.channelId);
 
-    const taskNew = this.createTask(interaction.channelId);
-    taskNew.lock.acquire();
-    task.lock.release();
-
-    let shop;
-    try {
-      shop = await this.db.shops.get(interaction.channelId);
-      shop ??= new Shop({ channelId: interaction.channelId });
-      shop.updatesAt = time.toDate();
-      await this.db.shops.upsert(shop);
-    } finally {
-      taskNew.lock.release();
-    }
+    let shop = await this.db.shops.get(interaction.channelId);
+    shop ??= new Shop({ channelId: interaction.channelId });
+    shop.updatesAt = time.toDate();
+    await this.db.shops.upsert(shop);
 
     await interaction.reply({
       content: "I will prepare my wares.",
       ephemeral: true,
     });
 
-    this.update(shop.channelId, time, taskNew).catch(console.error);
+    this.update(shop.channelId, time, task).catch(console.error);
   }
 
   private async close(interaction: ChatInputCommandInteraction) {
     const task = this.getTask(interaction.channelId);
-    await task.lock.acquire();
-
-    try {
-      if (task.cancelled) {
-        await interaction.reply({
-          content: "One cannot close that which is not open.",
-          ephemeral: true,
-        });
-
-        return;
-      }
-
-      task.cancel();
-
-      const shop = await this.db.shops.get(interaction.channelId);
-      if (shop == null) {
-        throw new Error(
-          `Shop not found with channelId=${interaction.channelId}.`,
-        );
-      }
-
-      const channel = await this.channelManager.fetch(shop.channelId);
-      if (channel == null || !channel.isTextBased()) {
-        throw new Error(`Invalid channelId: ${shop.channelId}.`);
-      }
-
-      await this.expire(channel, shop.messageId);
-      await this.db.shops.delete(shop.channelId);
-
+    if (task.cancelled) {
       await interaction.reply({
-        content: "See you next time!",
+        content: "One cannot close that which is not open.",
         ephemeral: true,
       });
-    } finally {
-      task.lock.release();
+
+      return;
     }
+
+    task.cancel();
+
+    const shop = await this.db.shops.get(interaction.channelId);
+    if (shop == null) {
+      throw new Error(
+        `Shop not found with channelId=${interaction.channelId}.`,
+      );
+    }
+
+    const channel = await this.channelManager.fetch(shop.channelId);
+    if (channel == null || !channel.isTextBased()) {
+      throw new Error(`Invalid channelId: ${shop.channelId}.`);
+    }
+
+    await this.expire(channel, shop.messageId);
+    await this.db.shops.delete(shop.channelId);
+
+    await interaction.reply({
+      content: "See you next time!",
+      ephemeral: true,
+    });
   }
 
   private async buy(interaction: StringSelectMenuInteraction) {
     const task = this.getTask(interaction.channelId);
-    await task.lock.acquire();
-
-    try {
-      if (task.cancelled) {
-        await interaction.reply({
-          content: "I must apologize, for my wares are unavailable.",
-          ephemeral: true,
-        });
-
-        return;
-      }
-
-      const shop = await this.db.shops.get(interaction.channelId);
-      if (shop == null) {
-        throw new Error(
-          `Shop not found with channelId=${interaction.channelId}.`,
-        );
-      }
-
-      const channel = await this.channelManager.fetch(shop.channelId);
-      if (channel == null || !channel.isTextBased()) {
-        throw new Error(`Invalid channelId: ${shop.channelId}.`);
-      }
-
-      if (shop.messageId == null) {
-        throw new Error(
-          `Shop with channelId="${shop.channelId}" has no message.`,
-        );
-      }
-
-      const message = await channel.messages.fetch(shop.messageId);
-      const user = await this.db.users.get(interaction.user.id);
-      const itemId = interaction.values[0];
-
-      let spellId;
-      let price;
-
-      switch (itemId) {
-        case "gatcha-2":
-          spellId = Random.getSpellId(2);
-          price = 3;
-          break;
-
-        case "gatcha-3":
-          spellId = Random.getSpellId(3);
-          price = 5;
-          break;
-
-        default:
-          spellId = Number(itemId);
-          price = this.getSpellPrice(spellId);
-
-          try {
-            shop.decrementSpell(spellId);
-          } catch (error) {
-            await interaction.reply({
-              content: "I cannot sell that which I do not possess.",
-              ephemeral: true,
-            });
-
-            await message.edit({
-              components: message.components,
-            });
-
-            return;
-          }
-
-          break;
-      }
-
-      if (price > user.scrolls) {
-        await interaction.reply({
-          content: "The price of this item is beyond your reach.",
-          ephemeral: true,
-        });
-
-        await message.edit({
-          components: message.components,
-        });
-
-        return;
-      }
-
-      user.scrolls -= price;
-      user.incrementSpell(spellId);
-
-      await this.db.withTransaction(async (tx) => {
-        await tx.users.upsert(user);
-        await tx.shops.upsert(shop);
-      });
-
-      const embed = new EmbedBuilder()
-        .setColor("Blue")
-        .setDescription(
-          `:scroll: ×${price} ⟹ **${configs.spellNames[spellId]}** ×1`,
-        );
-
+    if (task.cancelled) {
       await interaction.reply({
-        embeds: [embed],
+        content: "I must apologize, for my wares are unavailable.",
+        ephemeral: true,
       });
 
-      const ui = this.buildUI(shop);
-      await message.edit(ui);
-      channel.messages.cache.delete(message.id);
-    } finally {
-      task.lock.release();
+      return;
     }
+
+    const shop = await this.db.shops.get(interaction.channelId);
+    if (shop == null) {
+      throw new Error(
+        `Shop not found with channelId=${interaction.channelId}.`,
+      );
+    }
+
+    const channel = await this.channelManager.fetch(shop.channelId);
+    if (channel == null || !channel.isTextBased()) {
+      throw new Error(`Invalid channelId: ${shop.channelId}.`);
+    }
+
+    if (shop.messageId == null) {
+      throw new Error(
+        `Shop with channelId="${shop.channelId}" has no message.`,
+      );
+    }
+
+    const message = await channel.messages.fetch(shop.messageId);
+    const user = await this.db.users.get(interaction.user.id);
+    const itemId = interaction.values[0];
+
+    let spellId;
+    let price;
+
+    switch (itemId) {
+      case "gatcha-2":
+        spellId = Random.getSpellId(2);
+        price = 3;
+        break;
+
+      case "gatcha-3":
+        spellId = Random.getSpellId(3);
+        price = 5;
+        break;
+
+      default:
+        spellId = Number(itemId);
+        price = this.getSpellPrice(spellId);
+
+        try {
+          shop.decrementSpell(spellId);
+        } catch (error) {
+          await interaction.reply({
+            content: "I cannot sell that which I do not possess.",
+            ephemeral: true,
+          });
+
+          await message.edit({
+            components: message.components,
+          });
+
+          return;
+        }
+
+        break;
+    }
+
+    if (price > user.scrolls) {
+      await interaction.reply({
+        content: "The price of this item is beyond your reach.",
+        ephemeral: true,
+      });
+
+      await message.edit({
+        components: message.components,
+      });
+
+      return;
+    }
+
+    user.scrolls -= price;
+    user.incrementSpell(spellId);
+
+    await this.db.withTransaction(async (tx) => {
+      await tx.users.upsert(user);
+      await tx.shops.upsert(shop);
+    });
+
+    const embed = new EmbedBuilder()
+      .setColor("Blue")
+      .setDescription(
+        `:scroll: ×${price} ⟹ **${configs.spellNames[spellId]}** ×1`,
+      );
+
+    await interaction.reply({
+      embeds: [embed],
+    });
+
+    const ui = this.buildUI(shop);
+    await message.edit(ui);
+    channel.messages.cache.delete(message.id);
   }
 
   private async update(channelId: string, updatesAt: dayjs.Dayjs, task: Task) {
     while (true) {
       await sleepUntil(updatesAt.toDate(), task);
-      await task.lock.acquire();
+      await this.lock.acquire();
 
       try {
         if (task.cancelled) {
@@ -338,16 +318,12 @@ export class ShopHandler {
         console.error(error);
         await sleepFor(5000);
       } finally {
-        task.lock.release();
+        this.lock.release();
       }
     }
   }
 
   private createTask(channelId: string) {
-    if (this.tasks.has(channelId)) {
-      throw new Error(`Task for channelId="${channelId}" already exists.`);
-    }
-
     const result = new Task();
     this.tasks.set(channelId, result);
     result.onCancel(() => this.tasks.delete(channelId));

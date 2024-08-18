@@ -14,6 +14,7 @@ import Fuse from "fuse.js";
 import { Database } from "../dal/database.js";
 import { TradeOffer, User } from "../models/index.js";
 import { HashMap } from "../collections/hash-map.js";
+import { Lock } from "../utils/lock.js";
 import { Task } from "../utils/task.js";
 import { sleepUntil } from "../utils/time.js";
 import configs from "../configs/index.js";
@@ -43,6 +44,7 @@ export class TradeHandler {
     private userManager: UserManager,
     private channelManager: ChannelManager,
     private db: Database,
+    private lock: Lock,
   ) {
     this.spellIds = new Map();
     for (let i = 0; i < configs.spellNames.length; i++) {
@@ -57,7 +59,8 @@ export class TradeHandler {
   async setup() {
     const tradeOffers = await this.db.tradeOffers.getAll();
     for (const tradeOffer of tradeOffers) {
-      this.expire(tradeOffer).catch(console.error);
+      const task = this.createTask(tradeOffer);
+      this.expire(tradeOffer, task).catch(console.error);
     }
   }
 
@@ -116,7 +119,8 @@ export class TradeHandler {
       receive,
     );
 
-    this.expire(tradeOffer).catch(console.error);
+    const task = this.createTask(tradeOffer);
+    this.expire(tradeOffer, task).catch(console.error);
   }
 
   private async accept(interaction: ButtonInteraction) {
@@ -124,6 +128,15 @@ export class TradeHandler {
       interaction.channelId,
       interaction.message.id,
     );
+
+    if (tradeOffer == null) {
+      await interaction.reply({
+        content: "Fate has already been sealed.",
+        ephemeral: true,
+      });
+
+      return;
+    }
 
     if (interaction.user.id == tradeOffer.userId) {
       await interaction.reply({
@@ -160,16 +173,7 @@ export class TradeHandler {
       return;
     }
 
-    const task = this.tasks.get(tradeOffer);
-    if (task == null) {
-      await interaction.reply({
-        content: "Fate has already been sealed.",
-        ephemeral: true,
-      });
-
-      return;
-    }
-
+    const task = this.getTask(tradeOffer);
     task.cancel();
 
     await this.db.withTransaction(async (tx) => {
@@ -199,6 +203,15 @@ export class TradeHandler {
       interaction.message.id,
     );
 
+    if (tradeOffer == null) {
+      await interaction.reply({
+        content: "Fate has already been sealed.",
+        ephemeral: true,
+      });
+
+      return;
+    }
+
     if (interaction.user.id != tradeOffer.userId) {
       await interaction.reply({
         content: "You lack the priviledge to do so.",
@@ -208,16 +221,7 @@ export class TradeHandler {
       return;
     }
 
-    const task = this.tasks.get(tradeOffer);
-    if (task == null) {
-      await interaction.reply({
-        content: "Fate has already been sealed.",
-        ephemeral: true,
-      });
-
-      return;
-    }
-
+    const task = this.getTask(tradeOffer);
     task.cancel();
 
     const embed = new EmbedBuilder(interaction.message.embeds[0].data)
@@ -236,39 +240,51 @@ export class TradeHandler {
     );
   }
 
-  private async expire(tradeOffer: TradeOffer) {
-    const task = new Task();
-    task.onCancel(() => this.tasks.delete(tradeOffer));
-    this.tasks.set(tradeOffer, task);
+  private createTask(tradeOffer: TradeOffer) {
+    const result = new Task();
+    this.tasks.set(tradeOffer, result);
+    result.onCancel(() => this.tasks.delete(tradeOffer));
+    return result;
+  }
 
+  private getTask(tradeOffer: TradeOffer) {
+    return this.tasks.get(tradeOffer) ?? Task.cancel();
+  }
+
+  private async expire(tradeOffer: TradeOffer, task: Task) {
     await sleepUntil(tradeOffer.expiresAt, task);
-    if (task.cancelled) {
-      return;
+    await this.lock.acquire();
+
+    try {
+      if (task.cancelled) {
+        return;
+      }
+
+      this.tasks.delete(tradeOffer);
+
+      const channel = await this.channelManager.fetch(tradeOffer.channelId);
+      if (channel == null || !channel.isTextBased()) {
+        throw new Error(`Invalid channelId: "${tradeOffer.channelId}".`);
+      }
+
+      const message = await channel.messages.fetch(tradeOffer.messageId);
+      const embed = new EmbedBuilder(message.embeds[0].data)
+        .setColor("Red")
+        .setFooter({ text: "Expired" })
+        .setTimestamp(Date.now());
+
+      await message.edit({
+        embeds: [embed],
+        components: [],
+      });
+
+      await this.db.tradeOffers.delete(
+        tradeOffer.channelId,
+        tradeOffer.messageId,
+      );
+    } finally {
+      this.lock.release();
     }
-
-    this.tasks.delete(tradeOffer);
-
-    const channel = await this.channelManager.fetch(tradeOffer.channelId);
-    if (channel == null || !channel.isTextBased()) {
-      throw new Error(`Invalid channelId: "${tradeOffer.channelId}".`);
-    }
-
-    const message = await channel.messages.fetch(tradeOffer.messageId);
-
-    const embed = new EmbedBuilder(message.embeds[0].data)
-      .setColor("Red")
-      .setFooter({ text: "Expired" })
-      .setTimestamp(Date.now());
-
-    await message.edit({
-      embeds: [embed],
-      components: [],
-    });
-
-    await this.db.tradeOffers.delete(
-      tradeOffer.channelId,
-      tradeOffer.messageId,
-    );
   }
 
   private parse(input: string) {

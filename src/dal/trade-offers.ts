@@ -5,7 +5,7 @@ export class TradeOffers {
   constructor(private client: Client) {}
 
   async get(channelId: string, messageId: string) {
-    const result = await this.client.tradeOffer.findUniqueOrThrow({
+    const result = await this.client.tradeOffer.findUnique({
       where: {
         channelId_messageId: {
           channelId,
@@ -13,6 +13,10 @@ export class TradeOffers {
         },
       },
     });
+
+    if (result == null) {
+      return null;
+    }
 
     return new TradeOffer(result);
   }

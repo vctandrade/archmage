@@ -1,4 +1,5 @@
 import { Client, Events, GatewayIntentBits, Interaction } from "discord.js";
+import { Lock } from "./utils/lock.js";
 
 interface Handler {
   setup(): Promise<void>;
@@ -9,7 +10,7 @@ export default class Server {
   private client: Client;
   private handlers: Handler[] = [];
 
-  constructor() {
+  constructor(private lock: Lock) {
     this.client = new Client({
       intents: [GatewayIntentBits.Guilds],
     });
@@ -43,6 +44,8 @@ export default class Server {
   }
 
   private async handle(interaction: Interaction) {
+    this.lock.acquire();
+
     try {
       for (const handler of this.handlers) {
         if (await handler.handle(interaction)) {
@@ -51,6 +54,8 @@ export default class Server {
       }
     } catch (error) {
       console.error(error);
+    } finally {
+      this.lock.release();
     }
   }
 }

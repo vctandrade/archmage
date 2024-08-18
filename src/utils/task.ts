@@ -10,11 +10,6 @@ export class Task {
     return this._cancelled;
   }
 
-  private _lock = new Lock();
-  get lock() {
-    return this._lock;
-  }
-
   cancel() {
     if (this._cancelled) {
       return;
