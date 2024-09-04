@@ -35,6 +35,7 @@ await server.start();
 console.info("Ready!");
 
 async function gracefulShutdown() {
+  console.info("Shutting down.");
   await server.stop();
 }
 
