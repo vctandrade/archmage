@@ -54,7 +54,7 @@ export class GrimoireHandler {
 
     const embed = new EmbedBuilder().setColor("Purple").setAuthor({
       name: target.displayName,
-      iconURL: target.avatarURL() ?? undefined,
+      iconURL: target.displayAvatarURL(),
     });
 
     const fields = [];

@@ -256,6 +256,10 @@ export class ShopHandler {
     });
 
     const embed = new EmbedBuilder()
+      .setAuthor({
+        name: interaction.user.displayName,
+        iconURL: interaction.user.displayAvatarURL(),
+      })
       .setColor("Blue")
       .setDescription(
         `:scroll: ×${price} ⟹ **${configs.spellNames[spellId]}** ×1`,
