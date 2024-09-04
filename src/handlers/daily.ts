@@ -18,6 +18,8 @@ export class DailyHandler {
 
   async setup() {}
 
+  dispose() {}
+
   async handle(interaction: Interaction) {
     if (
       interaction.isChatInputCommand() &&

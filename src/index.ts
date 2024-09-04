@@ -36,7 +36,7 @@ console.info("Ready!");
 
 async function gracefulShutdown() {
   console.info("Shutting down.");
-  await server.stop();
+  await server.dispose();
 }
 
 for (const signal of ["SIGINT", "SIGTERM"]) {

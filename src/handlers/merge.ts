@@ -31,6 +31,8 @@ export class MergeHandler {
 
   async setup() {}
 
+  dispose() {}
+
   async handle(interaction: Interaction) {
     if (
       interaction.isChatInputCommand() &&

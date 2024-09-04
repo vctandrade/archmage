@@ -1,5 +1,3 @@
-import { Lock } from "./lock.js";
-
 type Callback = () => void;
 
 export class Task {

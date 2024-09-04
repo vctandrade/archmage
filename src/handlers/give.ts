@@ -37,6 +37,8 @@ export class GiveHandler {
 
   async setup() {}
 
+  dispose() {}
+
   async handle(interaction: Interaction) {
     if (
       interaction.isChatInputCommand() &&

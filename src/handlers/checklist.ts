@@ -21,6 +21,8 @@ export class ChecklistHandler {
 
   async setup() {}
 
+  dispose() {}
+
   async handle(interaction: Interaction) {
     if (
       interaction.isChatInputCommand() &&

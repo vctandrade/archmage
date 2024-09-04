@@ -3,6 +3,7 @@ import { Lock } from "./utils/lock.js";
 
 interface Handler {
   setup(): Promise<void>;
+  dispose(): void;
   handle(interaction: Interaction): Promise<boolean>;
 }
 
@@ -27,8 +28,18 @@ export default class Server {
     }
   }
 
-  async stop() {
-    await this.client.destroy();
+  async dispose() {
+    for (const handler of this.handlers) {
+      handler.dispose();
+    }
+
+    this.lock.acquire();
+
+    try {
+      await this.client.destroy();
+    } finally {
+      this.lock.release();
+    }
   }
 
   get users() {

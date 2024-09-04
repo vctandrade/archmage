@@ -64,6 +64,12 @@ export class TradeHandler {
     }
   }
 
+  dispose() {
+    for (const task of this.tasks.values()) {
+      task.cancel();
+    }
+  }
+
   async handle(interaction: Interaction) {
     if (
       interaction.isChatInputCommand() &&
