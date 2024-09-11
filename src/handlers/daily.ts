@@ -38,10 +38,10 @@ export class DailyHandler {
 
     if (
       user.lastDailyAt != null &&
-      now.getTime() - user.lastDailyAt.getTime() < 72000 * 1000
+      user.lastDailyAt.getTime() >= new Date(now).setHours(0, 0, 0, 0)
     ) {
       await interaction.reply({
-        content: `Try again <t:${Math.ceil(user.lastDailyAt.getTime() / 1000 + 72000)}:R>.`,
+        content: `Try again <t:${Math.ceil(new Date(now).setHours(24, 0, 0, 0) / 1000)}:R>.`,
         ephemeral: true,
       });
 

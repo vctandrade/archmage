@@ -1,9 +1,9 @@
 {
   "$schema": "https://json.schemastore.org/package",
   "name": "archmage",
+  "version": "1.0.1",
   "author": "Victor Andrade de Almeida",
   "license": "MIT",
-  "version": "1.0.0",
   "type": "module",
   "main": "dist/index.js",
   "scripts": {
@@ -13,6 +13,13 @@
     "generate": "npx prisma generate",
     "build": "rm -rf dist && tsc",
     "upload-commands": "node dist/upload-commands.js"
+  },
+  "dependencies": {
+    "@prisma/client": "^5.14.0",
+    "dayjs": "^1.11.12",
+    "discord.js": "^14.15.2",
+    "dotenv": "^16.4.5",
+    "fuse.js": "^7.0.0"
   },
   "devDependencies": {
     "@eslint/js": "^9.2.0",
@@ -24,13 +31,6 @@
     "prisma": "^5.14.0",
     "typescript": "^5.4.5",
     "typescript-eslint": "^7.8.0"
-  },
-  "dependencies": {
-    "@prisma/client": "^5.14.0",
-    "dayjs": "^1.11.12",
-    "discord.js": "^14.15.2",
-    "dotenv": "^16.4.5",
-    "fuse.js": "^7.0.0"
   },
   "prettier": {
     "plugins": [
