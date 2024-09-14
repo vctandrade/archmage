@@ -5,8 +5,34 @@ export const Random = {
     return min + Math.floor(Math.random() * (max - min));
   },
 
+  getWeightIndex(weights: number[]) {
+    let sum = 0;
+    for (const weight of weights) {
+      sum += weight;
+    }
+
+    let value = Math.random() * sum;
+    for (let i = 0; i < weights.length; i++) {
+      value -= weights[i];
+      if (value < 0) {
+        return i;
+      }
+    }
+
+    throw new Error("No valid entries.");
+  },
+
+  getBookId() {
+    const weights = [];
+    for (const book of configs.books) {
+      weights.push(book.weight);
+    }
+
+    return this.getWeightIndex(weights);
+  },
+
   getSpellId(level: number) {
-    const offset = 12 * Random.getInt(0, configs.books.length);
+    const offset = 12 * this.getBookId();
 
     switch (level) {
       case 1:
@@ -19,10 +45,10 @@ export const Random = {
         return offset + Random.getInt(10, 12);
     }
 
-    return -1;
+    throw new Error(`Invalid spell level: ${level}.`);
   },
 
-  sample(array: unknown[]) {
+  sample<T>(array: T[]) {
     return array[Random.getInt(0, array.length)];
   },
 };
