@@ -1,7 +1,7 @@
 {
   "$schema": "https://json.schemastore.org/package",
   "name": "archmage",
-  "version": "1.0.2",
+  "version": "1.1.0",
   "author": "Victor Andrade de Almeida",
   "license": "MIT",
   "type": "module",
@@ -15,11 +15,15 @@
     "upload-commands": "node dist/upload-commands.js"
   },
   "dependencies": {
+    "@discordjs/voice": "^0.17.0",
     "@prisma/client": "^5.14.0",
     "dayjs": "^1.11.12",
     "discord.js": "^14.15.2",
     "dotenv": "^16.4.5",
-    "fuse.js": "^7.0.0"
+    "ffmpeg-static": "^5.2.0",
+    "fuse.js": "^7.0.0",
+    "libsodium-wrappers": "^0.7.15",
+    "yt-stream": "^1.7.4"
   },
   "devDependencies": {
     "@eslint/js": "^9.2.0",

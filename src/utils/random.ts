@@ -51,4 +51,12 @@ export const Random = {
   sample<T>(array: T[]) {
     return array[Random.getInt(0, array.length)];
   },
+
+  pop<T>(array: T[]) {
+    const index = Random.getInt(0, array.length);
+    const result = array[index];
+    array[index] = array[array.length - 1];
+    array.pop();
+    return result;
+  },
 };

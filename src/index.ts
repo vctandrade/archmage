@@ -1,8 +1,9 @@
 import "dotenv/config";
+
+import ytstream from "yt-stream";
 import dayjs from "dayjs";
 import customParseFormat from "dayjs/plugin/customParseFormat.js";
 import { PrismaClient } from "@prisma/client";
-import Server from "./server.js";
 import { Database } from "./dal/database.js";
 import {
   ChecklistHandler,
@@ -11,10 +12,13 @@ import {
   GrimoireHandler,
   MergeHandler,
   ShopHandler,
+  StreamHandler,
   TradeHandler,
 } from "./handlers/index.js";
 import { Lock } from "./utils/lock.js";
+import Server from "./server.js";
 
+ytstream.setPreference("api", "ANDROID");
 dayjs.extend(customParseFormat);
 
 const lock = new Lock();
@@ -29,6 +33,7 @@ server.addHandler(new GiveHandler(db));
 server.addHandler(new GrimoireHandler(db));
 server.addHandler(new MergeHandler(db));
 server.addHandler(new ShopHandler(server.channels, db, lock));
+server.addHandler(new StreamHandler(server));
 server.addHandler(new TradeHandler(server.users, server.channels, db, lock));
 
 await server.start();

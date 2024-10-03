@@ -3,24 +3,24 @@ type Callback = () => void;
 export class Task {
   private cancelCallbacks: Callback[] = [];
 
-  private _cancelled = false;
-  get cancelled() {
-    return this._cancelled;
+  private _isCancelled = false;
+  get isCancelled() {
+    return this._isCancelled;
   }
 
   cancel() {
-    if (this._cancelled) {
+    if (this._isCancelled) {
       return;
     }
 
-    this._cancelled = true;
+    this._isCancelled = true;
     for (const callback of this.cancelCallbacks) {
       callback();
     }
   }
 
   onCancel(callback: Callback) {
-    if (this._cancelled) {
+    if (this._isCancelled) {
       callback();
       return;
     }

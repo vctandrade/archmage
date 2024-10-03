@@ -139,7 +139,7 @@ export class ShopHandler {
 
   private async close(interaction: ChatInputCommandInteraction) {
     const task = this.getTask(interaction.channelId);
-    if (task.cancelled) {
+    if (task.isCancelled) {
       await interaction.reply({
         content: "One cannot close that which is not open.",
         ephemeral: true,
@@ -173,7 +173,7 @@ export class ShopHandler {
 
   private async buy(interaction: StringSelectMenuInteraction) {
     const task = this.getTask(interaction.channelId);
-    if (task.cancelled) {
+    if (task.isCancelled) {
       await interaction.reply({
         content: "I must apologize, for my wares are unavailable.",
         ephemeral: true,
@@ -286,12 +286,12 @@ export class ShopHandler {
       await this.lock.acquire();
 
       try {
-        if (task.cancelled) {
+        if (task.isCancelled) {
           return;
         }
 
         const channel = await this.channelManager.fetch(channelId);
-        if (channel == null || !channel.isTextBased()) {
+        if (channel == null || !channel.isSendable()) {
           this.db.shops.delete(channelId);
           console.warn(
             `Deleted shop because channelId="${channelId}" was invalid.`,

@@ -262,7 +262,7 @@ export class TradeHandler {
     await this.lock.acquire();
 
     try {
-      if (task.cancelled) {
+      if (task.isCancelled) {
         return;
       }
 

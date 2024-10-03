@@ -1,4 +1,10 @@
-import { Client, Events, GatewayIntentBits, Interaction } from "discord.js";
+import {
+  ActivityOptions,
+  Client,
+  Events,
+  GatewayIntentBits,
+  Interaction,
+} from "discord.js";
 import { Lock } from "./utils/lock.js";
 
 interface Handler {
@@ -11,9 +17,17 @@ export default class Server {
   private client: Client;
   private handlers: Handler[] = [];
 
+  get users() {
+    return this.client.users;
+  }
+
+  get channels() {
+    return this.client.channels;
+  }
+
   constructor(private lock: Lock) {
     this.client = new Client({
-      intents: [GatewayIntentBits.Guilds],
+      intents: [GatewayIntentBits.Guilds, GatewayIntentBits.GuildVoiceStates],
     });
 
     this.client.on(Events.InteractionCreate, (interaction) =>
@@ -42,16 +56,14 @@ export default class Server {
     }
   }
 
-  get users() {
-    return this.client.users;
-  }
-
-  get channels() {
-    return this.client.channels;
-  }
-
   addHandler(handler: Handler) {
     this.handlers.push(handler);
+  }
+
+  setActivity(options?: ActivityOptions) {
+    if (this.client.isReady()) {
+      this.client.user.setActivity(options);
+    }
   }
 
   private async handle(interaction: Interaction) {

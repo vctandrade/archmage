@@ -1,4 +1,5 @@
 import "dotenv/config";
+
 import { REST, Routes } from "discord.js";
 import {
   ChecklistHandler,
@@ -7,6 +8,7 @@ import {
   GrimoireHandler,
   MergeHandler,
   ShopHandler,
+  StreamHandler,
   TradeHandler,
 } from "./handlers/index.js";
 
@@ -20,6 +22,13 @@ await rest.put(Routes.applicationCommands(process.env.DISCORD_APPLICATION_ID), {
     GrimoireHandler.info,
     MergeHandler.info,
     ShopHandler.info,
+    StreamHandler.infoBanish,
+    StreamHandler.infoConjure,
+    StreamHandler.infoDismiss,
+    StreamHandler.infoSummon,
     TradeHandler.info,
   ],
 });
+
+console.info("Done!");
+process.exit(0); // This is needed because yt-stream calls setInterval on import
