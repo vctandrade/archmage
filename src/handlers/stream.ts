@@ -53,16 +53,18 @@ export class StreamHandler {
     .setName("banish")
     .setDescription("Banishes the current song");
 
-  managers = new Map<string, Manager>();
+  private instances = new Map<string, Instance>();
 
   constructor(private server: Server) {}
 
   async setup() {}
 
   dispose() {
-    for (let manager of this.managers.values()) {
-      manager.dispose();
+    for (const instance of this.instances.values()) {
+      instance.dispose();
     }
+
+    this.instances.clear();
   }
 
   async handle(interaction: Interaction) {
@@ -101,18 +103,18 @@ export class StreamHandler {
     return false;
   }
 
-  async summon(interaction: ChatInputCommandInteraction) {
+  private async summon(interaction: ChatInputCommandInteraction) {
     const channel = interaction.options.getChannel<ChannelType.GuildVoice>(
       "channel",
       true,
     );
 
-    const manager =
-      this.managers.get(channel.guild.id) ?? new Manager(this.server);
+    const instance =
+      this.instances.get(channel.guild.id) ?? new Instance(this.server);
 
     try {
-      await manager.connect(channel);
-      this.managers.set(channel.guild.id, manager);
+      await instance.connect(channel);
+      this.instances.set(channel.guild.id, instance);
 
       await interaction.reply({
         content: "I am at your command.",
@@ -120,18 +122,18 @@ export class StreamHandler {
       });
     } catch (error) {
       console.error(error);
-      manager.dispose();
+      instance.dispose();
     }
   }
 
-  async dismiss(interaction: ChatInputCommandInteraction) {
+  private async dismiss(interaction: ChatInputCommandInteraction) {
     this.server.setActivity();
 
     if (interaction.guild != null) {
-      const manager = this.managers.get(interaction.guild.id);
-      if (manager != null) {
-        manager.dispose();
-        this.managers.delete(interaction.guild.id);
+      const instance = this.instances.get(interaction.guild.id);
+      if (instance != null) {
+        instance.dispose();
+        this.instances.delete(interaction.guild.id);
       }
     }
 
@@ -141,15 +143,15 @@ export class StreamHandler {
     });
   }
 
-  async conjure(interaction: ChatInputCommandInteraction) {
+  private async conjure(interaction: ChatInputCommandInteraction) {
     const url = interaction.options.getString("url", true);
 
-    let manager;
+    let instance;
     if (interaction.guild != null) {
-      manager = this.managers.get(interaction.guild.id);
+      instance = this.instances.get(interaction.guild.id);
     }
 
-    if (manager == null) {
+    if (instance == null) {
       await interaction.reply({
         content: "I shall not aid you lest I'm summoned.",
         ephemeral: true,
@@ -160,7 +162,7 @@ export class StreamHandler {
 
     if (ytstream.validateVideoURL(url)) {
       const data = await ytstream.getInfo(url);
-      await manager.add(url);
+      await instance.add(url);
 
       const embed = new EmbedBuilder()
         .setColor("Aqua")
@@ -177,11 +179,11 @@ export class StreamHandler {
       const playlist = await ytstream.getPlaylist(url);
 
       const urls: string[] = [];
-      for (let video of playlist.videos) {
+      for (const video of playlist.videos) {
         urls.push(video.video_url);
       }
 
-      await manager.add(...urls);
+      await instance.add(...urls);
 
       const embed = new EmbedBuilder()
         .setColor("Aqua")
@@ -204,13 +206,13 @@ export class StreamHandler {
     });
   }
 
-  async banish(interaction: ChatInputCommandInteraction) {
-    let manager;
+  private async banish(interaction: ChatInputCommandInteraction) {
+    let instance;
     if (interaction.guild != null) {
-      manager = this.managers.get(interaction.guild.id);
+      instance = this.instances.get(interaction.guild.id);
     }
 
-    if (manager == null || manager.data == null) {
+    if (instance == null || instance.data == null) {
       await interaction.reply({
         content: "There is nothing to banish.",
         ephemeral: true,
@@ -219,8 +221,8 @@ export class StreamHandler {
       return;
     }
 
-    const data = manager.data;
-    await manager.playNext(false);
+    const data = instance.data;
+    await instance.playNext(false);
 
     const embed = new EmbedBuilder()
       .setColor("Aqua")
@@ -232,7 +234,7 @@ export class StreamHandler {
   }
 }
 
-class Manager {
+class Instance {
   private player: AudioPlayer;
   private connection: VoiceConnection | null = null;
   private stream: Stream | null = null;
@@ -290,7 +292,7 @@ class Manager {
     }
   }
 
-  async playNext(keep: Boolean = true) {
+  async playNext(keep: boolean = true) {
     this.player.stop();
 
     if (this.stream != null) {

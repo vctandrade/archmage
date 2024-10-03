@@ -365,7 +365,7 @@ export class TradeHandler {
     try {
       giver.decrementSpell(spellId);
       receiver.incrementSpell(spellId);
-    } catch (error) {
+    } catch {
       throw new ErrorBadSpellTransfer(giver.id, configs.spellNames[spellId]);
     }
   }

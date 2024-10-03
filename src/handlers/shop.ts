@@ -224,7 +224,7 @@ export class ShopHandler {
 
         try {
           shop.decrementSpell(spellId);
-        } catch (error) {
+        } catch {
           await interaction.reply({
             content: "I cannot sell that which I do not possess.",
             ephemeral: true,
