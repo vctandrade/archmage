@@ -24,36 +24,35 @@ import Server from "../server.js";
 import { Random } from "../utils/random.js";
 
 export class StreamHandler {
-  static infoSummon = new SlashCommandBuilder()
-    .setName("summon")
-    .addChannelOption((option) =>
-      option
-        .setName("channel")
-        .setDescription("The voice channel you wish to summon me into")
-        .addChannelTypes(ChannelType.GuildVoice)
-        .setRequired(true),
-    )
-    .setDescription("Summons me into a voice channel");
-
-  static infoDismiss = new SlashCommandBuilder()
-    .setName("dismiss")
-    .setDescription("Dismisses me from all voice channels");
-
-  static infoConjure = new SlashCommandBuilder()
-    .setName("conjure")
-    .addStringOption((option) =>
-      option
-        .setName("url")
-        .setDescription("The URL of a song or playlist on YouTube")
-        .setRequired(true),
-    )
-    .setDescription("Conjures a song into the playlist");
-
-  static infoBanish = new SlashCommandBuilder()
-    .setName("banish")
-    .setDescription("Banishes the current song");
-
   private instances = new Map<string, Instance>();
+
+  static info = {
+    summon: new SlashCommandBuilder()
+      .setName("summon")
+      .addChannelOption((option) =>
+        option
+          .setName("channel")
+          .setDescription("The voice channel you wish to summon me into")
+          .addChannelTypes(ChannelType.GuildVoice)
+          .setRequired(true),
+      )
+      .setDescription("Summons me into a voice channel"),
+    dismiss: new SlashCommandBuilder()
+      .setName("dismiss")
+      .setDescription("Dismisses me from all voice channels"),
+    conjure: new SlashCommandBuilder()
+      .setName("conjure")
+      .addStringOption((option) =>
+        option
+          .setName("url")
+          .setDescription("The URL of a song or playlist")
+          .setRequired(true),
+      )
+      .setDescription("Conjures a song into the playlist"),
+    banish: new SlashCommandBuilder()
+      .setName("banish")
+      .setDescription("Banishes the current song"),
+  };
 
   constructor(private server: Server) {}
 
@@ -70,7 +69,7 @@ export class StreamHandler {
   async handle(interaction: Interaction) {
     if (
       interaction.isChatInputCommand() &&
-      interaction.commandName == StreamHandler.infoSummon.name
+      interaction.commandName == StreamHandler.info.summon.name
     ) {
       await this.summon(interaction);
       return true;
@@ -78,7 +77,7 @@ export class StreamHandler {
 
     if (
       interaction.isChatInputCommand() &&
-      interaction.commandName == StreamHandler.infoDismiss.name
+      interaction.commandName == StreamHandler.info.dismiss.name
     ) {
       await this.dismiss(interaction);
       return true;
@@ -86,7 +85,7 @@ export class StreamHandler {
 
     if (
       interaction.isChatInputCommand() &&
-      interaction.commandName == StreamHandler.infoConjure.name
+      interaction.commandName == StreamHandler.info.conjure.name
     ) {
       await this.conjure(interaction);
       return true;
@@ -94,7 +93,7 @@ export class StreamHandler {
 
     if (
       interaction.isChatInputCommand() &&
-      interaction.commandName == StreamHandler.infoBanish.name
+      interaction.commandName == StreamHandler.info.banish.name
     ) {
       await this.banish(interaction);
       return true;
