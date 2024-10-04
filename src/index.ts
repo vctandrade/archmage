@@ -1,6 +1,5 @@
 import "dotenv/config";
 
-import ytstream from "yt-stream";
 import dayjs from "dayjs";
 import customParseFormat from "dayjs/plugin/customParseFormat.js";
 import { PrismaClient } from "@prisma/client";
@@ -18,7 +17,6 @@ import {
 import { Lock } from "./utils/lock.js";
 import Server from "./server.js";
 
-ytstream.setPreference("api", "ANDROID");
 dayjs.extend(customParseFormat);
 
 const lock = new Lock();

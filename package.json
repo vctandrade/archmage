@@ -16,14 +16,15 @@
   },
   "dependencies": {
     "@discordjs/voice": "^0.17.0",
+    "@distube/ytdl-core": "^4.14.4",
+    "@distube/ytpl": "^1.2.1",
     "@prisma/client": "^5.14.0",
     "dayjs": "^1.11.12",
     "discord.js": "^14.15.2",
     "dotenv": "^16.4.5",
     "ffmpeg-static": "^5.2.0",
     "fuse.js": "^7.0.0",
-    "libsodium-wrappers": "^0.7.15",
-    "yt-stream": "^1.7.4"
+    "libsodium-wrappers": "^0.7.15"
   },
   "devDependencies": {
     "@eslint/js": "^9.2.0",

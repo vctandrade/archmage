@@ -1,3 +1,4 @@
+import { Readable } from "stream";
 import {
   ActivityType,
   ChannelType,
@@ -19,7 +20,8 @@ import {
   VoiceConnection,
   VoiceConnectionStatus,
 } from "@discordjs/voice";
-import ytstream, { Stream } from "yt-stream";
+import ytdl, { MoreVideoDetails } from "@distube/ytdl-core";
+import ytpl from "@distube/ytpl";
 import Server from "../server.js";
 import { Random } from "../utils/random.js";
 
@@ -159,13 +161,15 @@ export class StreamHandler {
       return;
     }
 
-    if (ytstream.validateVideoURL(url)) {
-      const data = await ytstream.getInfo(url);
-      await instance.add(url);
+    if (ytdl.validateURL(url)) {
+      const info = await ytdl.getBasicInfo(url);
+
+      instance.add(url);
+      await instance.ensurePlay();
 
       const embed = new EmbedBuilder()
         .setColor("Aqua")
-        .setDescription(`You conjured the sounds of **${data.title}**.`);
+        .setDescription(`You conjured **${info.videoDetails.title}**.`);
 
       await interaction.reply({
         embeds: [embed],
@@ -174,20 +178,19 @@ export class StreamHandler {
       return;
     }
 
-    if (ytstream.validatePlaylistURL(url)) {
-      const playlist = await ytstream.getPlaylist(url);
+    if (ytpl.validateID(url)) {
+      const playlist = await ytpl(url);
 
-      const urls: string[] = [];
-      for (const video of playlist.videos) {
-        urls.push(video.video_url);
+      for (const item of playlist.items) {
+        instance.add(item.url);
       }
 
-      await instance.add(...urls);
+      await instance.ensurePlay();
 
       const embed = new EmbedBuilder()
         .setColor("Aqua")
         .setDescription(
-          `You conjured ${playlist.videos.length} sounds of **${playlist.title}**.`,
+          `You conjured ${playlist.items.length} entities of **${playlist.title}**.`,
         );
 
       await interaction.reply({
@@ -211,7 +214,7 @@ export class StreamHandler {
       instance = this.instances.get(interaction.guild.id);
     }
 
-    if (instance == null || instance.data == null) {
+    if (instance == null || instance.trackDetails == null) {
       await interaction.reply({
         content: "There is nothing to banish.",
         ephemeral: true,
@@ -220,12 +223,12 @@ export class StreamHandler {
       return;
     }
 
-    const data = instance.data;
+    const trackDetails = instance.trackDetails;
     await instance.playNext(false);
 
     const embed = new EmbedBuilder()
       .setColor("Aqua")
-      .setDescription(`You banished the sounds of **${data.title}**.`);
+      .setDescription(`You banished the sounds of **${trackDetails.title}**.`);
 
     await interaction.reply({
       embeds: [embed],
@@ -236,14 +239,10 @@ export class StreamHandler {
 class Instance {
   private player: AudioPlayer;
   private connection: VoiceConnection | null = null;
-  private stream: Stream | null = null;
+  private track: Track | null = null;
 
   private queue: string[] = [];
   private trash: string[] = [];
-
-  get data() {
-    return this.stream?.info;
-  }
 
   constructor(private server: Server) {
     this.player = createAudioPlayer({
@@ -258,13 +257,17 @@ class Instance {
     );
   }
 
+  get trackDetails() {
+    return this.track?.details;
+  }
+
   dispose() {
     this.player.stop();
     this.connection?.destroy();
-    this.stream?.destroy();
+    this.track?.destroy();
 
     this.connection = null;
-    this.stream = null;
+    this.track = null;
   }
 
   async connect(channel: VoiceChannel) {
@@ -283,10 +286,12 @@ class Instance {
     this.connection.subscribe(this.player);
   }
 
-  async add(...urls: string[]) {
-    this.queue.push(...urls);
+  add(url: string) {
+    this.queue.push(url);
+  }
 
-    if (this.stream == null) {
+  async ensurePlay() {
+    if (this.track == null) {
       await this.playNext();
     }
   }
@@ -294,11 +299,11 @@ class Instance {
   async playNext(keep: boolean = true) {
     this.player.stop();
 
-    if (this.stream != null) {
-      this.stream.destroy();
+    if (this.track != null) {
+      this.track.destroy();
 
       if (keep) {
-        this.trash.push(this.stream.video_url);
+        this.trash.push(this.track.details.video_url);
       }
     }
 
@@ -307,32 +312,42 @@ class Instance {
       return;
     }
 
-    const url = Random.pop(this.queue);
-
-    this.stream = await ytstream.stream(url, {
-      quality: "high",
-      type: "audio",
-      highWaterMark: 1048576 * 32,
-      download: true,
+    const info = await ytdl.getInfo(Random.pop(this.queue));
+    const stream = ytdl.downloadFromInfo(info, {
+      filter: "audioonly",
+      quality: "highestaudio",
     });
+
+    this.track = new Track(info.videoDetails, stream);
 
     this.server.setActivity({
       type: ActivityType.Listening,
-      name: this.stream.info.title,
+      name: info.videoDetails.title,
     });
 
-    const audioResource = createAudioResource(this.stream.stream);
+    const audioResource = createAudioResource(stream);
     this.player.play(audioResource);
   }
 
   private recycle() {
     if (this.trash.length == 0) {
-      this.stream = null;
+      this.track = null;
       return false;
     }
 
     this.queue = this.trash;
     this.trash = [];
     return true;
+  }
+}
+
+class Track {
+  constructor(
+    public details: MoreVideoDetails,
+    private stream: Readable,
+  ) {}
+
+  destroy() {
+    this.stream.destroy();
   }
 }

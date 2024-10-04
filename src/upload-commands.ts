@@ -31,4 +31,3 @@ await rest.put(Routes.applicationCommands(process.env.DISCORD_APPLICATION_ID), {
 });
 
 console.info("Done!");
-process.exit(0); // This is needed because yt-stream calls setInterval on import
