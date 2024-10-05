@@ -64,7 +64,7 @@ export class TradeHandler {
     }
   }
 
-  dispose() {
+  destroy() {
     for (const task of this.tasks.values()) {
       task.cancel();
     }
@@ -249,7 +249,7 @@ export class TradeHandler {
   private createTask(tradeOffer: TradeOffer) {
     const result = new Task();
     this.tasks.set(tradeOffer, result);
-    result.onCancel(() => this.tasks.delete(tradeOffer));
+    result.on("cancel", () => this.tasks.delete(tradeOffer));
     return result;
   }
 

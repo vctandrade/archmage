@@ -1,8 +1,6 @@
-type Callback = () => void;
+import EventEmitter from "events";
 
-export class Task {
-  private cancelCallbacks: Callback[] = [];
-
+export class Task extends EventEmitter<TaskEventMap> {
   private _isCancelled = false;
   get isCancelled() {
     return this._isCancelled;
@@ -14,23 +12,7 @@ export class Task {
     }
 
     this._isCancelled = true;
-    for (const callback of this.cancelCallbacks) {
-      callback();
-    }
-  }
-
-  onCancel(callback: Callback) {
-    if (this._isCancelled) {
-      callback();
-      return;
-    }
-
-    this.cancelCallbacks.push(callback);
-  }
-
-  offCancel(callback: Callback) {
-    const index = this.cancelCallbacks.findIndex((entry) => entry == callback);
-    this.cancelCallbacks.splice(index, 1);
+    this.emit("cancel");
   }
 
   static cancel() {
@@ -38,4 +20,8 @@ export class Task {
     result.cancel();
     return result;
   }
+}
+
+interface TaskEventMap {
+  cancel: [];
 }

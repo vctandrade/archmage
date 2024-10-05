@@ -13,12 +13,12 @@ export function sleepFor(ms: number, task?: Task) {
 
   return new Promise<void>((resolve) => {
     const wake = () => {
-      task.offCancel(wake);
+      task.off("cancel", wake);
       clearTimeout(timeout);
       resolve();
     };
 
-    task.onCancel(wake);
+    task.on("cancel", wake);
     const timeout = setTimeout(wake, ms);
   });
 }

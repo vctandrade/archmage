@@ -37,7 +37,7 @@ export class GiveHandler {
 
   async setup() {}
 
-  dispose() {}
+  destroy() {}
 
   async handle(interaction: Interaction) {
     if (

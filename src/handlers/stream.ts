@@ -1,3 +1,4 @@
+import EventEmitter from "events";
 import { Readable } from "stream";
 import {
   ActivityType,
@@ -60,12 +61,10 @@ export class StreamHandler {
 
   async setup() {}
 
-  dispose() {
+  destroy() {
     for (const instance of this.instances.values()) {
-      instance.dispose();
+      instance.destroy();
     }
-
-    this.instances.clear();
   }
 
   async handle(interaction: Interaction) {
@@ -111,19 +110,18 @@ export class StreamHandler {
     );
 
     const instance =
-      this.instances.get(channel.guild.id) ?? new Instance(this.server);
+      this.instances.get(channel.guild.id) ??
+      this.buildInstance(channel.guild.id);
 
     try {
-      await instance.connect(channel);
-      this.instances.set(channel.guild.id, instance);
-
+      await instance.setup(channel);
       await interaction.reply({
         content: "I am at your command.",
         ephemeral: true,
       });
     } catch (error) {
-      console.error(error);
-      instance.dispose();
+      instance.destroy();
+      throw error;
     }
   }
 
@@ -133,8 +131,7 @@ export class StreamHandler {
     if (interaction.guild != null) {
       const instance = this.instances.get(interaction.guild.id);
       if (instance != null) {
-        instance.dispose();
-        this.instances.delete(interaction.guild.id);
+        instance.destroy();
       }
     }
 
@@ -234,9 +231,20 @@ export class StreamHandler {
       embeds: [embed],
     });
   }
+
+  private buildInstance(guildId: string) {
+    const result = new Instance(this.server);
+    this.instances.set(guildId, result);
+
+    result.on("destroy", () => {
+      this.instances.delete(guildId);
+    });
+
+    return result;
+  }
 }
 
-class Instance {
+class Instance extends EventEmitter<InstanceEventMap> {
   private player: AudioPlayer;
   private connection: VoiceConnection | null = null;
   private track: Track | null = null;
@@ -245,6 +253,8 @@ class Instance {
   private trash: string[] = [];
 
   constructor(private server: Server) {
+    super();
+
     this.player = createAudioPlayer({
       behaviors: {
         maxMissedFrames: 250,
@@ -261,16 +271,7 @@ class Instance {
     return this.track?.details;
   }
 
-  dispose() {
-    this.player.stop();
-    this.connection?.destroy();
-    this.track?.destroy();
-
-    this.connection = null;
-    this.track = null;
-  }
-
-  async connect(channel: VoiceChannel) {
+  async setup(channel: VoiceChannel) {
     if (this.connection != null) {
       this.connection.destroy();
     }
@@ -282,8 +283,23 @@ class Instance {
       channelId: channel.id,
     });
 
+    this.connection.on(VoiceConnectionStatus.Disconnected, () => {
+      this.destroy();
+    });
+
     await entersState(this.connection, VoiceConnectionStatus.Ready, 5_000);
     this.connection.subscribe(this.player);
+  }
+
+  destroy() {
+    this.player.stop();
+    this.connection?.destroy();
+    this.track?.destroy();
+
+    this.connection = null;
+    this.track = null;
+
+    this.emit("destroy");
   }
 
   add(url: string) {
@@ -339,6 +355,10 @@ class Instance {
     this.trash = [];
     return true;
   }
+}
+
+interface InstanceEventMap {
+  destroy: [];
 }
 
 class Track {

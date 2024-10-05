@@ -34,12 +34,12 @@ server.addHandler(new ShopHandler(server.channels, db, lock));
 server.addHandler(new StreamHandler(server));
 server.addHandler(new TradeHandler(server.users, server.channels, db, lock));
 
-await server.start();
+await server.setup();
 console.info("Ready!");
 
 async function gracefulShutdown() {
   console.info("Shutting down.");
-  await server.dispose();
+  await server.destroy();
 }
 
 for (const signal of ["SIGINT", "SIGTERM"]) {

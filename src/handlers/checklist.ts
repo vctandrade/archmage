@@ -21,7 +21,7 @@ export class ChecklistHandler {
 
   async setup() {}
 
-  dispose() {}
+  destroy() {}
 
   async handle(interaction: Interaction) {
     if (

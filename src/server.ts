@@ -9,7 +9,7 @@ import { Lock } from "./utils/lock.js";
 
 interface Handler {
   setup(): Promise<void>;
-  dispose(): void;
+  destroy(): void;
   handle(interaction: Interaction): Promise<boolean>;
 }
 
@@ -35,16 +35,16 @@ export default class Server {
     );
   }
 
-  async start() {
+  async setup() {
     await this.client.login(process.env.DISCORD_TOKEN);
     for (const handler of this.handlers) {
       await handler.setup();
     }
   }
 
-  async dispose() {
+  async destroy() {
     for (const handler of this.handlers) {
-      handler.dispose();
+      handler.destroy();
     }
 
     this.lock.acquire();

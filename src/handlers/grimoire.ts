@@ -22,7 +22,7 @@ export class GrimoireHandler {
 
   async setup() {}
 
-  dispose() {}
+  destroy() {}
 
   async handle(interaction: Interaction) {
     if (

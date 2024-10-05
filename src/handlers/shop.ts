@@ -64,7 +64,7 @@ export class ShopHandler {
     }
   }
 
-  dispose() {
+  destroy() {
     for (const task of this.tasks.values()) {
       task.cancel();
     }
@@ -336,7 +336,7 @@ export class ShopHandler {
   private createTask(channelId: string) {
     const result = new Task();
     this.tasks.set(channelId, result);
-    result.onCancel(() => this.tasks.delete(channelId));
+    result.on("cancel", () => this.tasks.delete(channelId));
     return result;
   }
 

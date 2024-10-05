@@ -18,7 +18,7 @@ export class DailyHandler {
 
   async setup() {}
 
-  dispose() {}
+  destroy() {}
 
   async handle(interaction: Interaction) {
     if (
