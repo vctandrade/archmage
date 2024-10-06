@@ -115,14 +115,15 @@ export class StreamHandler {
 
     try {
       await instance.setup(channel);
-      await interaction.reply({
-        content: "I am at your command.",
-        ephemeral: true,
-      });
     } catch (error) {
       instance.destroy();
       throw error;
     }
+
+    await interaction.reply({
+      content: "I am at your command.",
+      ephemeral: true,
+    });
   }
 
   private async dismiss(interaction: ChatInputCommandInteraction) {
@@ -260,6 +261,11 @@ class Instance extends EventEmitter<InstanceEventMap> {
         maxMissedFrames: 250,
         noSubscriber: NoSubscriberBehavior.Pause,
       },
+    });
+
+    this.player.on("error", (error) => {
+      console.error(error);
+      this.destroy();
     });
 
     this.player.on(AudioPlayerStatus.Idle, () =>
