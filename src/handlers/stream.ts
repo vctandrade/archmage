@@ -337,7 +337,9 @@ class Instance extends EventEmitter<InstanceEventMap> {
     const info = await ytdl.getInfo(Random.pop(this.queue));
     const stream = ytdl.downloadFromInfo(info, {
       filter: "audioonly",
-      quality: "highestaudio",
+      quality: "lowestaudio",
+      highWaterMark: 1 << 25,
+      dlChunkSize: 0,
     });
 
     this.track = new Track(info.videoDetails, stream);
