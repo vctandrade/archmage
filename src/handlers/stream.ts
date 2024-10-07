@@ -160,6 +160,7 @@ export class StreamHandler {
     }
 
     if (ytdl.validateURL(url)) {
+      await interaction.deferReply();
       const info = await ytdl.getBasicInfo(url);
 
       instance.add(url);
@@ -169,7 +170,7 @@ export class StreamHandler {
         .setColor("Aqua")
         .setDescription(`You conjured **${info.videoDetails.title}**.`);
 
-      await interaction.reply({
+      await interaction.editReply({
         embeds: [embed],
       });
 
@@ -177,6 +178,7 @@ export class StreamHandler {
     }
 
     if (ytpl.validateID(url)) {
+      await interaction.deferReply();
       const playlist = await ytpl(url);
 
       for (const item of playlist.items) {
@@ -191,14 +193,14 @@ export class StreamHandler {
           `You conjured ${playlist.items.length} entities of **${playlist.title}**.`,
         );
 
-      await interaction.reply({
+      await interaction.editReply({
         embeds: [embed],
       });
 
       return;
     }
 
-    console.error(`Invalid URL "${url}".`);
+    console.error(`Invalid stream URL "${url}".`);
 
     await interaction.reply({
       content: "The spell fails. Perhaps you used the wrong components.",
