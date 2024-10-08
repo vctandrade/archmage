@@ -18,6 +18,7 @@ import {
   entersState,
   joinVoiceChannel,
   NoSubscriberBehavior,
+  StreamType,
   VoiceConnection,
   VoiceConnectionStatus,
 } from "@discordjs/voice";
@@ -338,7 +339,11 @@ class Instance extends EventEmitter<InstanceEventMap> {
 
     const info = await ytdl.getInfo(Random.pop(this.queue));
     const stream = ytdl.downloadFromInfo(info, {
-      filter: "audioonly",
+      filter: (format) =>
+        !format.hasVideo &&
+        format.hasAudio &&
+        format.container == "webm" &&
+        format.codecs == "opus",
       quality: "lowestaudio",
       highWaterMark: 1 << 25,
       dlChunkSize: 0,
@@ -351,7 +356,10 @@ class Instance extends EventEmitter<InstanceEventMap> {
       name: info.videoDetails.title,
     });
 
-    const audioResource = createAudioResource(stream);
+    const audioResource = createAudioResource(stream, {
+      inputType: StreamType.WebmOpus,
+    });
+
     this.player.play(audioResource);
   }
 
