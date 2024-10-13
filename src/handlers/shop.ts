@@ -159,7 +159,7 @@ export class ShopHandler {
 
     const channel = await this.channelManager.fetch(shop.channelId);
     if (channel == null || !channel.isTextBased()) {
-      throw new Error(`Invalid channelId: ${shop.channelId}.`);
+      throw new Error(`Invalid channelId: "${shop.channelId}".`);
     }
 
     await this.expire(channel, shop.messageId);
@@ -191,7 +191,7 @@ export class ShopHandler {
 
     const channel = await this.channelManager.fetch(shop.channelId);
     if (channel == null || !channel.isTextBased()) {
-      throw new Error(`Invalid channelId: ${shop.channelId}.`);
+      throw new Error(`Invalid channelId: "${shop.channelId}".`);
     }
 
     if (shop.messageId == null) {

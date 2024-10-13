@@ -225,7 +225,13 @@ export class StreamHandler {
     }
 
     const trackDetails = instance.trackDetails;
-    await instance.playNext(false);
+
+    try {
+      await instance.playNext(false);
+    } catch (error) {
+      instance.destroy();
+      throw error;
+    }
 
     const embed = new EmbedBuilder()
       .setColor("Aqua")
@@ -266,14 +272,17 @@ class Instance extends EventEmitter<InstanceEventMap> {
       },
     });
 
-    this.player.on("error", (error) => {
+    const abort = (error: Error) => {
       console.error(error);
       this.destroy();
+    };
+
+    this.player.on("error", (error) => {
+      console.error(error);
+      this.playNext(false).catch(abort);
     });
 
-    this.player.on(AudioPlayerStatus.Idle, () =>
-      this.playNext().catch(console.error),
-    );
+    this.player.on(AudioPlayerStatus.Idle, () => this.playNext().catch(abort));
   }
 
   get trackDetails() {
@@ -332,35 +341,48 @@ class Instance extends EventEmitter<InstanceEventMap> {
       }
     }
 
-    if (this.queue.length == 0 && !this.recycle()) {
-      this.server.setActivity();
-      return;
+    let info: ytdl.videoInfo;
+    let stream: Readable;
+
+    while (true) {
+      if (this.queue.length == 0 && !this.recycle()) {
+        this.server.setActivity();
+        return;
+      }
+
+      const url = Random.pop(this.queue);
+
+      try {
+        info = await ytdl.getInfo(url);
+        stream = ytdl.downloadFromInfo(info, {
+          filter: (format) =>
+            !format.hasVideo &&
+            format.hasAudio &&
+            format.container == "webm" &&
+            format.codecs == "opus",
+          quality: "lowestaudio",
+          highWaterMark: 1 << 25,
+          dlChunkSize: 0,
+        });
+      } catch (error) {
+        console.error(`Skipping stream with url="${url}". ${error}`);
+        continue;
+      }
+
+      break;
     }
-
-    const info = await ytdl.getInfo(Random.pop(this.queue));
-    const stream = ytdl.downloadFromInfo(info, {
-      filter: (format) =>
-        !format.hasVideo &&
-        format.hasAudio &&
-        format.container == "webm" &&
-        format.codecs == "opus",
-      quality: "lowestaudio",
-      highWaterMark: 1 << 25,
-      dlChunkSize: 0,
-    });
-
-    this.track = new Track(info.videoDetails, stream);
-
-    this.server.setActivity({
-      type: ActivityType.Listening,
-      name: info.videoDetails.title,
-    });
 
     const audioResource = createAudioResource(stream, {
       inputType: StreamType.WebmOpus,
     });
 
+    this.track = new Track(info.videoDetails, stream);
     this.player.play(audioResource);
+
+    this.server.setActivity({
+      type: ActivityType.Listening,
+      name: info.videoDetails.title,
+    });
   }
 
   private recycle() {
