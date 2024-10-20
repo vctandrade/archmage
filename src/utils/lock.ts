@@ -22,6 +22,6 @@ export class Lock {
       return;
     }
 
-    next();
+    setTimeout(next);
   }
 }

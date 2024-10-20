@@ -278,7 +278,14 @@ class Instance extends EventEmitter<InstanceEventMap> {
     };
 
     this.player.on("error", (error) => {
-      console.error(error);
+      if (this.track != null) {
+        console.error(
+          `Error while streaming url: "${this.track?.details.video_url}". ${error}`,
+        );
+      } else {
+        console.log(error);
+      }
+
       this.playNext(false).catch(abort);
     });
 
@@ -365,7 +372,7 @@ class Instance extends EventEmitter<InstanceEventMap> {
           dlChunkSize: 0,
         });
       } catch (error) {
-        console.error(`Skipping stream with url="${url}". ${error}`);
+        console.error(`Error loading url: "${url}". ${error}`);
         continue;
       }
 
