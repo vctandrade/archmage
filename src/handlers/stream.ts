@@ -12,13 +12,13 @@ import {
 import {
   AudioPlayer,
   AudioPlayerStatus,
+  AudioResource,
   createAudioPlayer,
   createAudioResource,
   DiscordGatewayAdapterCreator,
   entersState,
   joinVoiceChannel,
   NoSubscriberBehavior,
-  StreamType,
   VoiceConnection,
   VoiceConnectionStatus,
 } from "@discordjs/voice";
@@ -26,6 +26,7 @@ import ytdl, { MoreVideoDetails } from "@distube/ytdl-core";
 import ytpl from "@distube/ytpl";
 import Server from "../server.js";
 import { Random } from "../utils/random.js";
+import { sleepFor } from "../utils/time.js";
 
 export class StreamHandler {
   private instances = new Map<string, Instance>();
@@ -215,7 +216,7 @@ export class StreamHandler {
       instance = this.instances.get(interaction.guild.id);
     }
 
-    if (instance == null || instance.trackDetails == null) {
+    if (instance == null || instance.streamDetails == null) {
       await interaction.reply({
         content: "There is nothing to banish.",
         ephemeral: true,
@@ -224,7 +225,7 @@ export class StreamHandler {
       return;
     }
 
-    const trackDetails = instance.trackDetails;
+    const streamDetails = instance.streamDetails;
 
     try {
       await instance.playNext(false);
@@ -235,7 +236,7 @@ export class StreamHandler {
 
     const embed = new EmbedBuilder()
       .setColor("Aqua")
-      .setDescription(`You banished the sounds of **${trackDetails.title}**.`);
+      .setDescription(`You banished the sounds of **${streamDetails.title}**.`);
 
     await interaction.reply({
       embeds: [embed],
@@ -257,7 +258,7 @@ export class StreamHandler {
 class Instance extends EventEmitter<InstanceEventMap> {
   private player: AudioPlayer;
   private connection: VoiceConnection | null = null;
-  private track: Track | null = null;
+  private audioResource: AudioResource<MoreVideoDetails> | null = null;
 
   private queue: string[] = [];
   private trash: string[] = [];
@@ -278,22 +279,24 @@ class Instance extends EventEmitter<InstanceEventMap> {
     };
 
     this.player.on("error", (error) => {
-      if (this.track != null) {
+      if (this.audioResource != null) {
         console.error(
-          `Error while streaming url: "${this.track?.details.video_url}". ${error}`,
+          `Error while streaming url: "${this.audioResource.metadata.video_url}". ${error}`,
         );
       } else {
         console.log(error);
       }
 
-      this.playNext(false).catch(abort);
+      sleepFor(3_000)
+        .then(() => this.playNext(false))
+        .catch(abort);
     });
 
     this.player.on(AudioPlayerStatus.Idle, () => this.playNext().catch(abort));
   }
 
-  get trackDetails() {
-    return this.track?.details;
+  get streamDetails() {
+    return this.audioResource?.metadata;
   }
 
   async setup(channel: VoiceChannel) {
@@ -319,10 +322,10 @@ class Instance extends EventEmitter<InstanceEventMap> {
   destroy() {
     this.player.stop();
     this.connection?.destroy();
-    this.track?.destroy();
+    this.audioResource?.playStream.destroy();
 
     this.connection = null;
-    this.track = null;
+    this.audioResource = null;
 
     this.emit("destroy");
   }
@@ -332,7 +335,7 @@ class Instance extends EventEmitter<InstanceEventMap> {
   }
 
   async ensurePlay() {
-    if (this.track == null) {
+    if (this.audioResource == null) {
       await this.playNext();
     }
   }
@@ -340,11 +343,11 @@ class Instance extends EventEmitter<InstanceEventMap> {
   async playNext(keep: boolean = true) {
     this.player.stop();
 
-    if (this.track != null) {
-      this.track.destroy();
+    if (this.audioResource != null) {
+      this.audioResource.playStream.destroy();
 
       if (keep) {
-        this.trash.push(this.track.details.video_url);
+        this.trash.push(this.audioResource.metadata.video_url);
       }
     }
 
@@ -362,30 +365,25 @@ class Instance extends EventEmitter<InstanceEventMap> {
       try {
         info = await ytdl.getInfo(url);
         stream = ytdl.downloadFromInfo(info, {
-          filter: (format) =>
-            !format.hasVideo &&
-            format.hasAudio &&
-            format.container == "webm" &&
-            format.codecs == "opus",
+          filter: "audioonly",
           quality: "lowestaudio",
           highWaterMark: 1 << 25,
           dlChunkSize: 0,
         });
       } catch (error) {
         console.error(`Error loading url: "${url}". ${error}`);
+        await sleepFor(3_000);
         continue;
       }
 
       break;
     }
 
-    const audioResource = createAudioResource(stream, {
-      inputType: StreamType.WebmOpus,
+    this.audioResource = createAudioResource(stream, {
+      metadata: info.videoDetails,
     });
 
-    this.track = new Track(info.videoDetails, stream);
-    this.player.play(audioResource);
-
+    this.player.play(this.audioResource);
     this.server.setActivity({
       type: ActivityType.Listening,
       name: info.videoDetails.title,
@@ -394,7 +392,7 @@ class Instance extends EventEmitter<InstanceEventMap> {
 
   private recycle() {
     if (this.trash.length == 0) {
-      this.track = null;
+      this.audioResource = null;
       return false;
     }
 
@@ -406,15 +404,4 @@ class Instance extends EventEmitter<InstanceEventMap> {
 
 interface InstanceEventMap {
   destroy: [];
-}
-
-class Track {
-  constructor(
-    public details: MoreVideoDetails,
-    private stream: Readable,
-  ) {}
-
-  destroy() {
-    this.stream.destroy();
-  }
 }
