@@ -26,6 +26,7 @@ await rest.put(Routes.applicationCommands(process.env.DISCORD_APPLICATION_ID), {
     StreamHandler.info.conjure,
     StreamHandler.info.dismiss,
     StreamHandler.info.summon,
+    StreamHandler.info.wildMagic,
     TradeHandler.info,
   ],
 });

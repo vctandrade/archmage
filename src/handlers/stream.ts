@@ -24,6 +24,7 @@ import {
 } from "@discordjs/voice";
 import ytdl, { MoreVideoDetails } from "@distube/ytdl-core";
 import ytpl from "@distube/ytpl";
+import ytsr from "@distube/ytsr";
 import Server from "../server.js";
 import { Random } from "../utils/random.js";
 import { sleepFor } from "../utils/time.js";
@@ -53,7 +54,16 @@ export class StreamHandler {
           .setDescription("The URL of a song or playlist")
           .setRequired(true),
       )
-      .setDescription("Conjures a song into the playlist"),
+      .setDescription("Conjures a song into the queue"),
+    wildMagic: new SlashCommandBuilder()
+      .setName("wildmagic")
+      .addStringOption((option) =>
+        option
+          .setName("chant")
+          .setDescription("The words used to bind the playlist")
+          .setRequired(true),
+      )
+      .setDescription("Conjures a playlist using its name"),
     banish: new SlashCommandBuilder()
       .setName("banish")
       .setDescription("Banishes the current song"),
@@ -96,6 +106,14 @@ export class StreamHandler {
 
     if (
       interaction.isChatInputCommand() &&
+      interaction.commandName == StreamHandler.info.wildMagic.name
+    ) {
+      await this.wildMagic(interaction);
+      return true;
+    }
+
+    if (
+      interaction.isChatInputCommand() &&
       interaction.commandName == StreamHandler.info.banish.name
     ) {
       await this.banish(interaction);
@@ -129,8 +147,6 @@ export class StreamHandler {
   }
 
   private async dismiss(interaction: ChatInputCommandInteraction) {
-    this.server.setActivity();
-
     if (interaction.guild != null) {
       const instance = this.instances.get(interaction.guild.id);
       if (instance != null) {
@@ -192,7 +208,7 @@ export class StreamHandler {
       const embed = new EmbedBuilder()
         .setColor("Aqua")
         .setDescription(
-          `You conjured ${playlist.items.length} entities of **${playlist.title}**.`,
+          `You conjured ${playlist.items.length} incantations from **${playlist.title}**.`,
         );
 
       await interaction.editReply({
@@ -207,6 +223,54 @@ export class StreamHandler {
     await interaction.reply({
       content: "The spell fails. Perhaps you used the wrong components.",
       ephemeral: true,
+    });
+  }
+
+  private async wildMagic(interaction: ChatInputCommandInteraction) {
+    const chant = interaction.options.getString("chant", true);
+
+    let instance;
+    if (interaction.guild != null) {
+      instance = this.instances.get(interaction.guild.id);
+    }
+
+    if (instance == null) {
+      await interaction.reply({
+        content: "I shall not aid you lest I'm summoned.",
+        ephemeral: true,
+      });
+
+      return;
+    }
+
+    await interaction.deferReply();
+    const results = await ytsr(chant, { type: "playlist", limit: 1 });
+    if (results.items.length == 0) {
+      await interaction.reply({
+        content: "Your spell fizzles and fails.",
+        ephemeral: true,
+      });
+
+      return;
+    }
+
+    const playlist = await ytpl(results.items[0].url);
+
+    instance.clear();
+    for (const item of playlist.items) {
+      instance.add(item.url);
+    }
+
+    await instance.ensurePlay();
+
+    const embed = new EmbedBuilder()
+      .setColor("Aqua")
+      .setDescription(
+        `You conjured ${playlist.items.length} incantations from **${playlist.title}**.`,
+      );
+
+    await interaction.editReply({
+      embeds: [embed],
     });
   }
 
@@ -321,6 +385,8 @@ class Instance extends EventEmitter<InstanceEventMap> {
 
   destroy() {
     this.player.stop();
+    this.server.setActivity();
+
     this.connection?.destroy();
     this.audioResource?.playStream.destroy();
 
@@ -334,6 +400,17 @@ class Instance extends EventEmitter<InstanceEventMap> {
     this.queue.push(url);
   }
 
+  clear() {
+    this.player.stop();
+    this.server.setActivity();
+
+    this.audioResource?.playStream.destroy();
+    this.audioResource = null;
+
+    this.queue = [];
+    this.trash = [];
+  }
+
   async ensurePlay() {
     if (this.audioResource == null) {
       await this.playNext();
@@ -344,11 +421,12 @@ class Instance extends EventEmitter<InstanceEventMap> {
     this.player.stop();
 
     if (this.audioResource != null) {
-      this.audioResource.playStream.destroy();
-
       if (keep) {
         this.trash.push(this.audioResource.metadata.video_url);
       }
+
+      this.audioResource.playStream.destroy();
+      this.audioResource = null;
     }
 
     let info: ytdl.videoInfo;
@@ -392,7 +470,6 @@ class Instance extends EventEmitter<InstanceEventMap> {
 
   private recycle() {
     if (this.trash.length == 0) {
-      this.audioResource = null;
       return false;
     }
 
