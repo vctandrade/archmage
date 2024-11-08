@@ -10,7 +10,57 @@ import {
   StringSelectMenuOptionBuilder,
 } from "discord.js";
 import { Database } from "../dal/database.js";
+import { UserSpell } from "../models/user.js";
 import configs from "../configs/index.js";
+
+class Checklist {
+  data = new Map<number, Set<number>>();
+
+  constructor(spells: UserSpell[]) {
+    for (const spell of spells) {
+      if (spell.amount > 0) this.add(spell.id);
+    }
+  }
+
+  has(spellId: number) {
+    const bookIndex = Math.floor(spellId / 12);
+    return this.getSpellIds(bookIndex).has(spellId);
+  }
+
+  add(spellId: number) {
+    const bookIndex = Math.floor(spellId / 12);
+    this.getSpellIds(bookIndex).add(spellId);
+  }
+
+  getDescription(bookIndex: number) {
+    const spellIds = this.getSpellIds(bookIndex);
+    if (spellIds.size >= 12) {
+      return "Complete!";
+    }
+
+    let count1 = 0;
+    let count2 = 0;
+    let count3 = 0;
+
+    for (const spellId of spellIds) {
+      if (spellId % 12 < 5) count1++;
+      else if (spellId % 12 < 10) count2++;
+      else count3++;
+    }
+
+    return `${count1} • ${count2} • ${count3} known spells`;
+  }
+
+  private getSpellIds(bookIndex: number) {
+    let result = this.data.get(bookIndex);
+    if (result == null) {
+      result = new Set<number>();
+      this.data.set(bookIndex, result);
+    }
+
+    return result;
+  }
+}
 
 export class ChecklistHandler {
   static info = new SlashCommandBuilder()
@@ -59,28 +109,13 @@ export class ChecklistHandler {
   private async buildReply(userId: string, bookIndex: number) {
     const user = await this.db.users.get(userId);
 
-    const unknownSpellsByBook = new Map<number, number>();
-    const knownSpellIds = new Set<number>();
-
-    const countUnknownSpells = (bookIndex: number) =>
-      unknownSpellsByBook.get(bookIndex) ?? 12;
-
-    for (const spell of user.spells) {
-      if (spell.amount <= 0) {
-        continue;
-      }
-
-      const bookIndex = Math.floor(spell.id / 12);
-      unknownSpellsByBook.set(bookIndex, countUnknownSpells(bookIndex) - 1);
-      knownSpellIds.add(spell.id);
-    }
-
+    const checklist = new Checklist(user.spells);
     const offset = bookIndex * 12;
 
     const fields = [
-      this.buildSpellList(knownSpellIds, "Level 1", offset + 0, offset + 5),
-      this.buildSpellList(knownSpellIds, "Level 2", offset + 5, offset + 10),
-      this.buildSpellList(knownSpellIds, "Level 3", offset + 10, offset + 12),
+      this.buildSpellList(checklist, "Level 1", offset + 0, offset + 5),
+      this.buildSpellList(checklist, "Level 2", offset + 5, offset + 10),
+      this.buildSpellList(checklist, "Level 3", offset + 10, offset + 12),
     ];
 
     const embed = new EmbedBuilder()
@@ -93,10 +128,7 @@ export class ChecklistHandler {
     const options = [];
     for (let bookIndex = 0; bookIndex < configs.books.length; bookIndex++) {
       const book = configs.books[bookIndex];
-
-      const unknownSpells = countUnknownSpells(bookIndex);
-      const description =
-        unknownSpells > 0 ? `${unknownSpells} unknown spells` : "Complete!";
+      const description = checklist.getDescription(bookIndex);
 
       options.push(
         new StringSelectMenuOptionBuilder()
@@ -121,7 +153,7 @@ export class ChecklistHandler {
   }
 
   private buildSpellList(
-    knownSpellIds: Set<number>,
+    checklist: Checklist,
     name: string,
     minId: number,
     maxId: number,
@@ -130,7 +162,7 @@ export class ChecklistHandler {
     for (let spellId = minId; spellId < maxId; spellId++) {
       const spellName = configs.spellNames[spellId];
       content.push(
-        format(knownSpellIds.has(spellId) ? "~~%s~~" : "%s", spellName),
+        format(checklist.has(spellId) ? "☑ %s" : "☐ %s", spellName),
       );
     }
 
