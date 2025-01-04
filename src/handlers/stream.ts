@@ -246,9 +246,8 @@ export class StreamHandler {
     await interaction.deferReply();
     const results = await ytsr(chant, { type: "playlist", limit: 1 });
     if (results.items.length == 0) {
-      await interaction.reply({
+      await interaction.editReply({
         content: "Your spell fizzles and fails.",
-        ephemeral: true,
       });
 
       return;
