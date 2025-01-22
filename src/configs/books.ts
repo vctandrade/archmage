@@ -72,6 +72,6 @@ export default [
   {
     name: "Sand",
     icon: "⌛",
-    weight: 2,
+    weight: 1,
   },
 ];
