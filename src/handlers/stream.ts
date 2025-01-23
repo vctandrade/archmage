@@ -67,6 +67,9 @@ export class StreamHandler {
     banish: new SlashCommandBuilder()
       .setName("banish")
       .setDescription("Banishes the current song"),
+    massBanish: new SlashCommandBuilder()
+      .setName("massbanish")
+      .setDescription("Banishes all songs in the queue"),
   };
 
   constructor(private server: Server) {}
@@ -117,6 +120,14 @@ export class StreamHandler {
       interaction.commandName == StreamHandler.info.banish.name
     ) {
       await this.banish(interaction);
+      return true;
+    }
+
+    if (
+      interaction.isChatInputCommand() &&
+      interaction.commandName == StreamHandler.info.massBanish.name
+    ) {
+      await this.banishAll(interaction);
       return true;
     }
 
@@ -186,7 +197,7 @@ export class StreamHandler {
 
       const embed = new EmbedBuilder()
         .setColor("Aqua")
-        .setDescription(`You conjured **${info.videoDetails.title}**.`);
+        .setDescription(`**${info.videoDetails.title}** was conjured.`);
 
       await interaction.editReply({
         embeds: [embed],
@@ -208,7 +219,7 @@ export class StreamHandler {
       const embed = new EmbedBuilder()
         .setColor("Aqua")
         .setDescription(
-          `You conjured ${playlist.items.length} incantations from **${playlist.title}**.`,
+          `${playlist.items.length} songs from **${playlist.title}** were conjured.`,
         );
 
       await interaction.editReply({
@@ -221,7 +232,7 @@ export class StreamHandler {
     console.error(`Invalid stream URL "${url}".`);
 
     await interaction.reply({
-      content: "The spell fails. Perhaps you used the wrong components.",
+      content: "The spell fizzles and fails.",
       ephemeral: true,
     });
   }
@@ -247,7 +258,7 @@ export class StreamHandler {
     const results = await ytsr(chant, { type: "playlist", limit: 1 });
     if (results.items.length == 0) {
       await interaction.editReply({
-        content: "Your spell fizzles and fails.",
+        content: "The spell fizzles and fails.",
       });
 
       return;
@@ -265,7 +276,7 @@ export class StreamHandler {
     const embed = new EmbedBuilder()
       .setColor("Aqua")
       .setDescription(
-        `You conjured ${playlist.items.length} incantations from **${playlist.title}**.`,
+        `${playlist.items.length} songs from **${playlist.title}** were conjured.`,
       );
 
     await interaction.editReply({
@@ -299,7 +310,33 @@ export class StreamHandler {
 
     const embed = new EmbedBuilder()
       .setColor("Aqua")
-      .setDescription(`You banished the sounds of **${streamDetails.title}**.`);
+      .setDescription(`**${streamDetails.title}** was banished.`);
+
+    await interaction.reply({
+      embeds: [embed],
+    });
+  }
+
+  private async banishAll(interaction: ChatInputCommandInteraction) {
+    let instance;
+    if (interaction.guild != null) {
+      instance = this.instances.get(interaction.guild.id);
+    }
+
+    if (instance == null || instance.streamDetails == null) {
+      await interaction.reply({
+        content: "There is nothing to banish.",
+        ephemeral: true,
+      });
+
+      return;
+    }
+
+    instance.clear();
+
+    const embed = new EmbedBuilder()
+      .setColor("Aqua")
+      .setDescription(`All songs were banished.`);
 
     await interaction.reply({
       embeds: [embed],
